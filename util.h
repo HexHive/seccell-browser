@@ -1,3 +1,3 @@
 
-int strtod(char *c);
-int simple_strcmp(char *s0, char *s1);
+int util_strtod(char *c);
+int util_strcmp(char *s0, char *s1);

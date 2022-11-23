@@ -1,5 +1,6 @@
+#include "util.h"
 
-int strtod(char *c) {
+int util_strtod(char *c) {
     int num = 0;
     char digit;
 
@@ -11,7 +12,7 @@ int strtod(char *c) {
     return num;
 }
 
-int simple_strcmp(char *s0, char *s1) {
+int util_strcmp(char *s0, char *s1) {
     char c0, c1;
 
     do {

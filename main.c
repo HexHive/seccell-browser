@@ -1,27 +1,25 @@
 #include "translate.h"
 #include <stdio.h>
 
-char program[] = 
-    "alloc array, 10;"
-    "set array, 0, 1;"
-    "set array, 2, 5;"
-    "set array, 4, 7;"
-    "get array, 5;"
-    "get array, 7;";
+char program0[] = 
+    "alloc arr, 10;"
+    "set arr, 0, 1;"
+    "set arr, 2, 5;"
+    "set arr, 4, 7;"
+    "get arr, 5;"
+    "get arr, 7;";
 
 int main() {
-    char *cmd, *arg0, *arg1, *arg2;
-    char *prog = program;
+    char *cmd, *args[MAX_ARGS];
+    char *prog = program0;
 
-    while((cmd = next_command(&prog))) {
+    while((cmd = command_next(&prog))) {
         printf("%s\n", cmd);
-        if(interpret_command(cmd, &arg0, &arg1, &arg2) != 0)
+        if(command_interpret(cmd, args) != 0)
             break;
         
-        printf("cmd: %s arg0: %s\n", cmd, arg0);
-
-        for(int j = 0; j < n_commands; j++)
-            if(match(cmd, j))
-                commands[j].print(arg0, arg1, arg2);
+        for(int j = 0; j < vocabulary_size; j++)
+            if(command_match(cmd, j))
+                vocabulary[j].print(args);
     }
 }

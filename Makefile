@@ -1,6 +1,11 @@
 CFLAGS += -g
+APP = main
 
-main: translate.o main.o util.o
+${APP}: translate.o main.o util.o
 
 translate.o: translate.c
 
+.PHONY: clean
+clean:
+	rm *.o
+	rm ${APP}
