@@ -14,7 +14,9 @@ int main() {
     char *cmdstr;
     command_t cmd;
     char *prog = program0;
+    sandbox_t box0;
 
+    sandbox_init(&box0);
     while((cmdstr = command_next(&prog))) {
         printf("%s\n", cmdstr);
         if(command_decode(cmdstr, &cmd) != 0)
@@ -23,5 +25,7 @@ int main() {
         for(int j = 0; j < vocabulary_size; j++)
             if(command_match(cmd, j))
                 vocabulary[j].print(cmd);
+                
+        sandbox_add_command(&box0, cmd);
     }
 }

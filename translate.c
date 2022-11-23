@@ -86,3 +86,29 @@ command_type_t vocabulary[] = {
     { .opcode = "print", .n_args = 2, .print = print_print }
 };
 int vocabulary_size = sizeof(vocabulary) / sizeof(vocabulary[0]);
+
+arena_t arenas[MAX_ARENAS];
+int     n_arenas_used;
+
+int sandbox_init(sandbox_t *box) {
+    if(n_arenas_used >= MAX_ARENAS)
+        return -1;
+    
+    box->n_cmds = 0;
+    box->arena = arenas[n_arenas_used];
+    n_arenas_used++;
+
+    box->cur_code_idx = 0;
+
+    return 0;
+}
+
+int sandbox_add_command(sandbox_t *box, command_t cmd) {
+    box->cmds[box->n_cmds++] = cmd;
+    /* TODO: Also translate to arena here */
+
+    return 0;
+}
+void sandbox_execute() {
+
+}
