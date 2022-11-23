@@ -87,7 +87,7 @@ command_type_t vocabulary[] = {
 };
 int vocabulary_size = sizeof(vocabulary) / sizeof(vocabulary[0]);
 
-arena_t arenas[MAX_ARENAS];
+arena_t arenas[MAX_ARENAS] __aligned__(ARENA_SIZE);
 int     n_arenas_used;
 
 int sandbox_init(sandbox_t *box) {
@@ -97,6 +97,7 @@ int sandbox_init(sandbox_t *box) {
     box->n_cmds = 0;
     box->arena = arenas[n_arenas_used];
     n_arenas_used++;
+    mprotect(box->arena, ARENA_SIZE, PROT_READ | PROT_WRITE | PROT_EXEC);
 
     box->cur_code_idx = 0;
 

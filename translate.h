@@ -24,11 +24,16 @@ extern command_type_t vocabulary[];
 extern int            vocabulary_size;
 
 /* Define sandboxes for running programs */
+typedef struct app_context {
+
+} app_context_t;
 typedef struct sandbox {
     command_t cmds[MAX_CMDS];
     int       cmd_code_idx[MAX_CMDS];
     int n_cmds;
+    
     void *arena;        /* Generated code is put in the arena */
+    app_context_t *ctx;
 
     int cur_code_idx;
 } sandbox_t;
