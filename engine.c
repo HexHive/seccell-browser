@@ -1,6 +1,6 @@
 #include "commands.h"
 #include "external.h"
-#include "translate.h"
+#include "engine.h"
 #include "util.h"
 
 char *command_next(char **prog) {

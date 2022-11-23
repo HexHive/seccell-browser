@@ -1,5 +1,5 @@
-#ifndef TRANSLATE_H
-#define TRANSLATE_H
+#ifndef ENGINE_H
+#define ENGINE_H
 
 #define MAX_ARGS   (1 + 4)
 #define MAX_CMDS   0x100
@@ -86,4 +86,4 @@ int sandbox_execute(sandbox_t *box, int n_cmds);
 void *sandbox_alloc_trampoline(sandbox_t *box, int size);
 void sandbox_print_var_trampoline(sandbox_t *box, const char *var, int val);
 
-#endif /* TRANSLATE_H */
+#endif /* ENGINE_H */

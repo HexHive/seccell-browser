@@ -1,7 +1,7 @@
 #ifndef COMMAND_H
 #define COMMAND_H
 
-#include "translate.h"
+#include "engine.h"
 
 void init_command_sizes();
 

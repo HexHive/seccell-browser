@@ -1,9 +1,10 @@
 CFLAGS += -g
-APP = main
+APP = browser
 
-${APP}: translate.o main.o commands.o external.o
+SRCS = engine.c main.c commands.c external.c
+OBJS=$(SRCS:.c=.o )
 
-translate.o: translate.c
+${APP}: ${OBJS}
 
 .PHONY: clean
 clean:
