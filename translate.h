@@ -4,7 +4,7 @@
 #define MAX_ARGS   (1 + 4)
 #define MAX_CMDS   0x100
 #define MAX_ARENAS 0x10
-#define ARENA_SIZE 0x1000
+#define ARENA_SIZE 0x4000
 #define MAX_VARS   0x10
 #define MAX_VAR_SZ 0x10
 #define MAX_ARRS   0x10
@@ -31,6 +31,7 @@ typedef struct command_type {
     int n_args;
     const command_printer_t  print;
     const command_executor_t execute;
+    int *executor_sizep;
 } command_type_t;
 
 extern command_type_t vocabulary[];
@@ -54,6 +55,10 @@ typedef struct app_context {
     int n_arrays;
 
     int cur_code_idx;
+
+    /* List of callbacks into the Engine */
+    void *(*allocator)(sandbox_t *box, int size);
+    void (*print_var)(sandbox_t *box, const char *var, int val);
 } app_context_t;
 
 typedef int (*app_executor_t)(const sandbox_t *box, app_context_t *ctx, int n_cmds);
@@ -79,5 +84,6 @@ int sandbox_execute(sandbox_t *box, int n_cmds);
 
 /* Callbacks from the webapp to the sandbox */
 void *sandbox_alloc_trampoline(sandbox_t *box, int size);
+void sandbox_print_var_trampoline(sandbox_t *box, const char *var, int val);
 
 #endif /* TRANSLATE_H */

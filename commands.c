@@ -53,7 +53,7 @@ int alloc_executor(const sandbox_t *box, app_context_t *ctx, const command_t *cm
         if(util_strcmp(ctx->arrays[i].name, arrname) == 0)
             return -1;
 
-    int *alloc_base = sandbox_alloc_trampoline((sandbox_t *)box, arrsize * sizeof(int));
+    int *alloc_base = ctx->allocator((sandbox_t *)box, arrsize * sizeof(int));
 
     util_strcpy(ctx->arrays[ctx->n_arrays].name, arrname);
     ctx->arrays[ctx->n_arrays].base = alloc_base;
@@ -88,7 +88,7 @@ int get_executor(const sandbox_t *box, app_context_t *ctx, const command_t *cmd)
     if(!varvalue) {
         if(ctx->n_vars >= MAX_VARS)
             return -1;
-            
+
         var_t *var = &ctx->vars[ctx->n_vars];
         util_strcpy(var->name, varname);
         varvalue = &var->value;
@@ -138,7 +138,8 @@ int print_executor(const sandbox_t *box, app_context_t *ctx, const command_t *cm
     if(!varvalue)
         return -1;
 
-    printf("%s: %d\n", varname, *varvalue);
+    ctx->print_var((sandbox_t *)box, varname, *varvalue);
+
     return 0;
 }
 

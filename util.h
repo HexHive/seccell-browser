@@ -6,7 +6,7 @@
 #endif
 
 // TODO: Handle hexadecimal numbers
-static inline 
+static inline  __attribute__((always_inline))
 int util_strtod(const char *c) {
     int num = 0;
     char digit;
@@ -19,8 +19,8 @@ int util_strtod(const char *c) {
     return num;
 }
 
-static inline 
-int util_strcmp(const char *s0, const char *s1) {
+static inline  __attribute__((always_inline))
+int util_strcmp(const char *s0, const char *s1)  {
     char c0, c1;
 
     do {
@@ -37,8 +37,8 @@ int util_strcmp(const char *s0, const char *s1) {
     return 0;
 }
 
-static inline
-void util_strcpy(char *dst, const const char *src) {
+static inline __attribute__((always_inline))
+void util_strcpy(char *dst, const const char *src)  {
     char c;
     do {
         c = *src;
@@ -49,8 +49,8 @@ void util_strcpy(char *dst, const const char *src) {
     } while(c);
 }
 
-static inline
-void util_memcpy(char *dst, char *src, int size) {
+static inline __attribute__((always_inline))
+void util_memcpy(char *dst, char *src, int size)  {
     for(int i = 0; i < size; i++) 
         *(dst++) = *(src++);
 }

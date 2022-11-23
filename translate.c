@@ -2,6 +2,7 @@
 #include "translate.h"
 #include "util.h"
 
+#include <stdio.h>
 #include <sys/mman.h>
 
 char *command_next(char **prog) {
@@ -66,10 +67,10 @@ int command_match(command_t cmd, int idx) {
 }
 
 command_type_t vocabulary[] = {
-    { .opcode = "alloc", .n_args = 3, .print = print_alloc, .execute = alloc_executor  },
-    { .opcode = "get",   .n_args = 4, .print = print_get,   .execute = get_executor    },
-    { .opcode = "set",   .n_args = 4, .print = print_set,   .execute = set_executor    },
-    { .opcode = "print", .n_args = 2, .print = print_print, .execute = print_executor  }
+    { .opcode = "alloc", .n_args = 3, .print = print_alloc, .execute = alloc_executor, .executor_sizep = &alloc_executor_size },
+    { .opcode = "get",   .n_args = 4, .print = print_get,   .execute = get_executor,   .executor_sizep = &get_executor_size },
+    { .opcode = "set",   .n_args = 4, .print = print_set,   .execute = set_executor,   .executor_sizep = &set_executor_size },
+    { .opcode = "print", .n_args = 2, .print = print_print, .execute = print_executor, .executor_sizep = &print_executor_size }
 };
 int vocabulary_size = sizeof(vocabulary) / sizeof(vocabulary[0]);
 
@@ -102,17 +103,18 @@ int sandbox_init(sandbox_t *box) {
     init_command_sizes();
 
     /* Copy executor into the arena */
-    void *space_for_execute_commands = sandbox_alloc(box, execute_commands_size);
-    util_memcpy(box->arena, (void *)execute_commands, execute_commands_size);
-
-    // printf("execute is at %x commands alloc is at %x is %d bytes\n", execute_commands, alloc_executor, execute_commands_size);
+    void *space = sandbox_alloc(box, execute_commands_size);
+    util_memcpy(space, (void *)execute_commands, execute_commands_size);
 
     box->ctx.n_arrays = 0;
     box->ctx.n_vars   = 0;
     box->ctx.cur_code_idx = 0;
+    box->ctx.allocator = sandbox_alloc_trampoline;
+    box->ctx.print_var = sandbox_print_var_trampoline;
 
-    // TODO: Replace by pointer to execute_commands in arena
-    box->execute = execute_commands;
+    box->execute = space;
+    // box->execute = execute_commands;
+
     return 0;
 }
 
@@ -125,9 +127,14 @@ int sandbox_add_command(sandbox_t *box, command_t cmd) {
     box->cmds[cmd_idx] = cmd;
     for(int j = 0; j < vocabulary_size; j++)
         if(command_match(cmd, j)) {
-            // TODO: Currently using the same execute function. 
-            // Later, copy over to the arena
-            box->cmds[cmd_idx].execute = vocabulary[j].execute;
+            /* Copy code for the command into the arena and set the 
+             * executor accordingly */
+            int executor_size = *vocabulary[j].executor_sizep;
+            void *space = sandbox_alloc(box,  executor_size);
+            if(!space)
+                return -1;
+            util_memcpy(space, (void *)vocabulary[j].execute, executor_size);
+            box->cmds[cmd_idx].execute = space;
         }
 
     box->n_cmds++;
@@ -142,4 +149,14 @@ void *sandbox_alloc_trampoline(sandbox_t *box, int size) {
     // TODO: Implement compartment switching here
 
     return sandbox_alloc(box, size);
+}
+
+void sandbox_print_var(sandbox_t *box, const char *varname, int varvalue) {
+    printf("%s: %d\n", varname, varvalue);
+}
+
+void sandbox_print_var_trampoline(sandbox_t *box, const char *var, int val) {
+    // TODO: Implement compartment switching here
+
+    sandbox_print_var(box, var, val);
 }
