@@ -2,25 +2,6 @@
 #include "util.h"
 #include <stdio.h>
 
-void print_alloc(char **args) {
-    printf("allocate array named %s, size %d\n", args[1], util_strtod(args[2]));
-}
-
-void print_get(char **args) {
-    printf("get array %s index %d\n", args[1], util_strtod(args[2]));
-}
-
-void print_set(char **args) {
-    printf("set array %s index %d to %d\n", args[1], util_strtod(args[2]), util_strtod(args[3]));
-}
-
-command_type_t vocabulary[] = {
-    { .opcode = "alloc", .print = print_alloc },
-    { .opcode = "get",   .print = print_get   },
-    { .opcode = "set",   .print = print_set   }
-};
-int vocabulary_size = sizeof(vocabulary) / sizeof(vocabulary[0]);
-
 char *command_next(char **prog) {
     char *start, *end, c;
     start = end = *prog;
@@ -41,22 +22,22 @@ static int is_separator(char c) {
     return c == ' ' || c == ',' || c == '\0';
 }
 
-int command_interpret(char *cmd, char **args) {
+int command_decode(char *cmdstr, command_t *cmd) {
     char c, prevc = 0;
     int state = 0;
     
     for(int j = 0; j < MAX_ARGS; j++)
-        args[j] = NULL;
+        cmd->args[j] = NULL;
 
     while (1) {
-        c = *cmd;
+        c = *cmdstr;
 
         if (state < MAX_ARGS) {
             if(!is_separator(c) && is_separator(prevc))
                 
-                args[state] = cmd;
+                cmd->args[state] = cmdstr;
             else if(!is_separator(prevc) && is_separator(c)) {
-                *cmd = '\0';
+                *cmdstr = '\0';
                 state++;
             }
         } else 
@@ -66,12 +47,14 @@ int command_interpret(char *cmd, char **args) {
             break;
 
         prevc = c;
-        cmd++;
+        cmdstr++;
     }
     return 0;
 }
 
-int command_match(char *opcode, int idx) {
+int command_match(command_t cmd, int idx) {
+    char *opcode = cmd.args[0];
+
     if(idx >= vocabulary_size)
         return 0;
 
@@ -79,3 +62,22 @@ int command_match(char *opcode, int idx) {
 
     return util_strcmp(opcode, cmd_opcode) == 0;
 }
+
+static void print_alloc(command_t cmd) {
+    printf("allocate array named %s, size %d\n", cmd.args[1], util_strtod(cmd.args[2]));
+}
+
+static void print_get(command_t cmd) {
+    printf("get array %s index %d\n", cmd.args[1], util_strtod(cmd.args[2]));
+}
+
+static void print_set(command_t cmd) {
+    printf("set array %s index %d to %d\n", cmd.args[1], util_strtod(cmd.args[2]), util_strtod(cmd.args[3]));
+}
+
+command_type_t vocabulary[] = {
+    { .opcode = "alloc", .print = print_alloc },
+    { .opcode = "get",   .print = print_get   },
+    { .opcode = "set",   .print = print_set   }
+};
+int vocabulary_size = sizeof(vocabulary) / sizeof(vocabulary[0]);

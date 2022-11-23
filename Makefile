@@ -7,5 +7,5 @@ translate.o: translate.c
 
 .PHONY: clean
 clean:
-	rm *.o
-	rm ${APP}
+	rm -f *.o
+	rm -f ${APP}
