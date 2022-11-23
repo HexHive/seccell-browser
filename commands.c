@@ -1,9 +1,7 @@
-#include "translate.h"
 #include "commands.h"
+#include "external.h"
+#include "translate.h"
 #include "util.h"
-
-#include <stdio.h>
-#include <stdint.h>
 
 int execute_commands_size;
 int alloc_executor_size;
@@ -144,17 +142,42 @@ int print_executor(const sandbox_t *box, app_context_t *ctx, const command_t *cm
 }
 
 void print_alloc(command_t cmd) {
-    printf("allocate array named %s, size %d\n", cmd.args[1], util_strtod(cmd.args[2]));
+    char buf[256];
+    uintptr_t args[] = {
+        (uintptr_t)cmd.args[1], 
+        (uintptr_t)util_strtod(cmd.args[2])
+    };
+    int size = util_snprintf(buf, 256, "allocate array named %s, size %d\n", args);
+    prints(buf, size);
 }
 
 void print_get(command_t cmd) {
-    printf("read array %s index %d into variable %s\n", cmd.args[1], util_strtod(cmd.args[2]), cmd.args[3]);
+    char buf[256];
+    uintptr_t args[] = {
+        (uintptr_t)cmd.args[1], 
+        (uintptr_t)util_strtod(cmd.args[2]), 
+        (uintptr_t)cmd.args[3]
+    };
+    int size = util_snprintf(buf, 256, "read array %s index %d into variable %s\n", args);
+    prints(buf, size);
 }
 
 void print_set(command_t cmd) {
-    printf("set array %s index %d to %d\n", cmd.args[1], util_strtod(cmd.args[2]), util_strtod(cmd.args[3]));
+    char buf[256];
+    uintptr_t args[] = {
+        (uintptr_t)cmd.args[1], 
+        (uintptr_t)util_strtod(cmd.args[2]), 
+        (uintptr_t)util_strtod(cmd.args[3])
+    };
+    int size = util_snprintf(buf, 256, "set array %s index %d to %d\n", args);
+    prints(buf, size);
 }
 
 void print_print(command_t cmd) {
-    printf("print variable %s\n", cmd.args[1]);
+    char buf[256];
+    uintptr_t args[] = {
+        (uintptr_t)cmd.args[1]
+    };
+    int size = util_snprintf(buf, 256, "print variable %s\n", args);
+    prints(buf, size);
 }

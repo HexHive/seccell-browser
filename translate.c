@@ -1,9 +1,7 @@
 #include "commands.h"
+#include "external.h"
 #include "translate.h"
 #include "util.h"
-
-#include <stdio.h>
-#include <sys/mman.h>
 
 char *command_next(char **prog) {
     char *start, *end, c;
@@ -98,7 +96,7 @@ int sandbox_init(sandbox_t *box) {
     box->arena = arenas[n_arenas_used];
     n_arenas_used++;
     box->used_bytes = 0;
-    mprotect(box->arena, ARENA_SIZE, PROT_READ | PROT_WRITE | PROT_EXEC);
+    protect_region(box->arena, ARENA_SIZE, 1, 1, 1);
 
     init_command_sizes();
 
@@ -152,7 +150,13 @@ void *sandbox_alloc_trampoline(sandbox_t *box, int size) {
 }
 
 void sandbox_print_var(sandbox_t *box, const char *varname, int varvalue) {
-    printf("%s: %d\n", varname, varvalue);
+    char buf[256];
+    uintptr_t args[] = {
+        (uintptr_t)varname, 
+        (uintptr_t)varvalue
+    };
+    int size = util_snprintf(buf, 256, "%s: %d\n", args);
+    prints(buf, size);
 }
 
 void sandbox_print_var_trampoline(sandbox_t *box, const char *var, int val) {

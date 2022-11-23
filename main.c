@@ -1,5 +1,4 @@
 #include "translate.h"
-#include <stdio.h>
 
 char program0[] = 
     "alloc arr, 10;"
@@ -25,10 +24,6 @@ int main() {
         if(command_decode(cmdstr, &cmd) != 0)
             break;
         
-        // for(int j = 0; j < vocabulary_size; j++)
-        //     if(command_match(cmd, j))
-        //         vocabulary[j].print(cmd);
-                
         sandbox_add_command(&box0, cmd);
     }
 
