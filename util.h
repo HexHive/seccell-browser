@@ -6,15 +6,39 @@
 #endif
 typedef unsigned long uintptr_t;
 
-// TODO: Handle hexadecimal numbers
+static inline __attribute__((always_inline))
+char to_char(int n) {
+    if(n < 10)
+        return '0' + n;
+    else
+        return 'a' + n - 10;
+}
+
+static inline __attribute__((always_inline))
+int from_char(char c) {
+    if('0' <= c <= '9')
+        return c - '0';
+    else if('A' <= c <= 'Z')
+        return c - 'A';
+    else if('a' <= c <= 'z')
+        return c - 'a';
+    
+    return 0;
+}
+
 static inline  __attribute__((always_inline))
-int util_strtod(const char *c) {
-    int num = 0;
+int util_strtod(const char *s) {
+    int num = 0, base = 10;
     char digit;
 
-    while((digit = *c) != 0) {
-        num = (10 * num) + (digit - '0');
-        c++;
+    if(s[0] == '0' && s[1] == 'x') {
+        base = 16;
+        s += 2;
+    }
+
+    while((digit = *s) != 0) {
+        num = (base * num) + from_char(digit);
+        s++;
     }
     
     return num;
@@ -54,13 +78,6 @@ static inline __attribute__((always_inline))
 void util_memcpy(char *dst, char *src, int size)  {
     for(int i = 0; i < size; i++) 
         *(dst++) = *(src++);
-}
-static inline __attribute__((always_inline))
-char to_char(int n) {
-    if(n < 10)
-        return '0' + n;
-    else
-        return 'a' + n - 10;
 }
 
 static inline __attribute__((always_inline))
@@ -118,7 +135,7 @@ int util_snprintf(char *buf, int max, const char *format, uintptr_t args[]) {
                 *(buf + out_idx++) = '\0';
             else
                 return -1;
-                
+
             state = 0;
         } else
             return -1;
