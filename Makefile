@@ -1,7 +1,7 @@
 CFLAGS += -g
 APP = main
 
-${APP}: translate.o main.o util.o
+${APP}: translate.o main.o commands.o
 
 translate.o: translate.c
 
