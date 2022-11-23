@@ -7,7 +7,8 @@ char program0[] =
     "set arr, 2, 5;"
     "set arr, 4, 7;"
     "get arr, 5, var0;"
-    "get arr, 7, var1;";
+    "get arr, 7, var1;"
+    "print var1;";
 
 int main() {
     char *cmdstr;

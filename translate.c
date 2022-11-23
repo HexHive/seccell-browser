@@ -75,9 +75,14 @@ static void print_set(command_t cmd) {
     printf("set array %s index %d to %d\n", cmd.args[1], util_strtod(cmd.args[2]), util_strtod(cmd.args[3]));
 }
 
+static void print_print(command_t cmd) {
+    printf("print variable %s\n", cmd.args[1]);
+}
+
 command_type_t vocabulary[] = {
     { .opcode = "alloc", .n_args = 3, .print = print_alloc },
     { .opcode = "get",   .n_args = 4, .print = print_get   },
-    { .opcode = "set",   .n_args = 4, .print = print_set   }
+    { .opcode = "set",   .n_args = 4, .print = print_set   },
+    { .opcode = "print", .n_args = 2, .print = print_print }
 };
 int vocabulary_size = sizeof(vocabulary) / sizeof(vocabulary[0]);
