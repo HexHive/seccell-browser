@@ -68,7 +68,7 @@ static void print_alloc(command_t cmd) {
 }
 
 static void print_get(command_t cmd) {
-    printf("get array %s index %d\n", cmd.args[1], util_strtod(cmd.args[2]));
+    printf("read array %s index %d into variable %s\n", cmd.args[1], util_strtod(cmd.args[2]), cmd.args[3]);
 }
 
 static void print_set(command_t cmd) {
@@ -76,8 +76,8 @@ static void print_set(command_t cmd) {
 }
 
 command_type_t vocabulary[] = {
-    { .opcode = "alloc", .print = print_alloc },
-    { .opcode = "get",   .print = print_get   },
-    { .opcode = "set",   .print = print_set   }
+    { .opcode = "alloc", .n_args = 3, .print = print_alloc },
+    { .opcode = "get",   .n_args = 4, .print = print_get   },
+    { .opcode = "set",   .n_args = 4, .print = print_set   }
 };
 int vocabulary_size = sizeof(vocabulary) / sizeof(vocabulary[0]);

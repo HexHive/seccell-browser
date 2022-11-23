@@ -13,6 +13,7 @@ int command_match(command_t cmd, int idx);
 /* Defines types of valid commands */
 typedef struct command_type {
     char *opcode;
+    int n_args;
     void (*print)(command_t cmd);
 } command_type_t;
 
