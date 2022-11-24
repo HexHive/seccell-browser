@@ -27,7 +27,7 @@ typedef struct command_type {
     int n_args;
     const command_printer_t  print;
     const command_executor_t execute;
-    int *executor_sizep;
+    long *executor_sizep;
 } command_type_t;
 
 extern command_type_t vocabulary[];
@@ -36,7 +36,7 @@ extern int            vocabulary_size;
 /* Define sandboxes for running programs */
 typedef struct variable {
     char name[MAX_VAR_SZ];
-    int value;
+    long value;
 } var_t;
 
 typedef struct array {
@@ -45,34 +45,34 @@ typedef struct array {
 } array_t;
 
 typedef char arena_t[ARENA_SIZE];
-extern int     n_arenas_used;
+extern long     n_arenas_used;
 
 typedef struct app_context {
     var_t vars[MAX_VARS];
-    int n_vars;
+    long n_vars;
 
     array_t arrays[MAX_ARRS];
-    int n_arrays;
+    long n_arrays;
 
     arena_t darena;
-    int d_used_bytes;
+    long d_used_bytes;
 
-    int cur_code_idx;
+    long cur_code_idx;
 
     /* List of callbacks into the Engine */
-    void *(*allocator)(sandbox_t *box, int size);
-    void (*print_var)(sandbox_t *box, const char *var, int val);
+    void *(*allocator)(sandbox_t *box, long size);
+    void (*print_var)(sandbox_t *box, const char *var, long val);
 } app_context_t;
 
-typedef int (*app_executor_t)(const sandbox_t *box, app_context_t *ctx, int n_cmds);
+typedef int (*app_executor_t)(const sandbox_t *box, app_context_t *ctx, long n_cmds);
 typedef struct sandbox {
     command_t cmds[MAX_CMDS];
     
     void *cmd_code_ptrs[MAX_CMDS];
-    int n_cmds;
+    long n_cmds;
 
     void *carena;        /* Generated code is put in the arena */
-    int c_used_bytes;
+    long c_used_bytes;
 
     app_executor_t execute;
     app_context_t *ctx;
@@ -82,10 +82,10 @@ int engine_init();
 
 int sandbox_init(sandbox_t *box);
 int sandbox_add_command(sandbox_t *box, command_t cmd);
-int sandbox_execute(sandbox_t *box, int n_cmds);
+int sandbox_execute(sandbox_t *box, long n_cmds);
 
 /* Callbacks from the webapp to the sandbox */
-void *sandbox_alloc_trampoline(sandbox_t *box, int size);
-void sandbox_print_var_trampoline(sandbox_t *box, const char *var, int val);
+void *sandbox_alloc_trampoline(sandbox_t *box, long size);
+void sandbox_print_var_trampoline(sandbox_t *box, const char *var, long val);
 
 #endif /* ENGINE_H */

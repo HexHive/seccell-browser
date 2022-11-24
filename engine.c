@@ -72,7 +72,7 @@ command_type_t vocabulary[] = {
 };
 int vocabulary_size = sizeof(vocabulary) / sizeof(vocabulary[0]);
 
-int     n_arenas_used = 0;
+long     n_arenas_used = 0;
 int engine_init() {
     if(platform_specific_setup())
         return 1;
@@ -92,9 +92,9 @@ static void *alloc_ctx() {
 // TODO: Possibly allocate illegal instructions between the 
 // existing allocation and the new one, in order to catch some
 // bugs
-static void *sandbox_alloc(sandbox_t *box, int size, int code) {
+static void *sandbox_alloc(sandbox_t *box, long size, int code) {
     char *reg;
-    int *reg_used_bytes;
+    long *reg_used_bytes;
 
     if(code) {
         reg = box->carena;
@@ -143,17 +143,17 @@ int sandbox_init(sandbox_t *box) {
 }
 
 int sandbox_add_command(sandbox_t *box, command_t cmd) {
-    int cmd_idx = box->n_cmds;
+    long cmd_idx = box->n_cmds;
 
     if(cmd_idx >= MAX_CMDS)
         return -1;
 
     box->cmds[cmd_idx] = cmd;
-    for(int j = 0; j < vocabulary_size; j++)
+    for(long j = 0; j < vocabulary_size; j++)
         if(command_match(cmd, j)) {
             /* Copy code for the command into the arena and set the 
              * executor accordingly */
-            int executor_size = *vocabulary[j].executor_sizep;
+            long executor_size = *vocabulary[j].executor_sizep;
             void *space = sandbox_alloc(box,  executor_size, 1);
             if(!space)
                 return -1;
@@ -169,27 +169,27 @@ int sandbox_add_command(sandbox_t *box, command_t cmd) {
     return 0;
 }
 
-int sandbox_execute(sandbox_t *box, int n_cmds) {
+int sandbox_execute(sandbox_t *box, long n_cmds) {
     return box->execute(box, box->ctx, n_cmds);
 }
 
-void *sandbox_alloc_trampoline(sandbox_t *box, int size) {
+void *sandbox_alloc_trampoline(sandbox_t *box, long size) {
     // TODO: Implement compartment switching here
 
     return sandbox_alloc(box, size, 0);
 }
 
-void sandbox_print_var(sandbox_t *box, const char *varname, int varvalue) {
+void sandbox_print_var(sandbox_t *box, const char *varname, long varvalue) {
     char buf[256];
     uintptr_t args[] = {
         (uintptr_t)varname, 
         (uintptr_t)varvalue
     };
-    int size = util_snprintf(buf, 256, "%s: %x\n", args);
+    long size = util_snprintf(buf, 256, "%s: %x\n", args);
     prints(buf, size);
 }
 
-void sandbox_print_var_trampoline(sandbox_t *box, const char *var, int val) {
+void sandbox_print_var_trampoline(sandbox_t *box, const char *var, long val) {
     // TODO: Implement compartment switching here
 
     sandbox_print_var(box, var, val);

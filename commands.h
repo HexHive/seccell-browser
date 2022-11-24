@@ -5,17 +5,17 @@
 
 void init_command_sizes();
 
-int execute_commands(const sandbox_t *box, app_context_t *ctx, int n_cmds);
-extern int execute_commands_size;
+int execute_commands(const sandbox_t *box, app_context_t *ctx, long n_cmds);
+extern long execute_commands_size;
 
 int alloc_executor(const sandbox_t *box, app_context_t *ctx, const command_t *cmd);
 int get_executor(const sandbox_t *box, app_context_t *ctx, const command_t *cmd);
 int set_executor(const sandbox_t *box, app_context_t *ctx, const command_t *cmd);
 int print_executor(const sandbox_t *box, app_context_t *ctx, const command_t *cmd);
-extern int alloc_executor_size;
-extern int get_executor_size;
-extern int set_executor_size;
-extern int print_executor_size;
+extern long alloc_executor_size;
+extern long get_executor_size;
+extern long set_executor_size;
+extern long print_executor_size;
 
 void print_alloc(command_t cmd);
 void print_get(command_t cmd);

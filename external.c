@@ -7,11 +7,11 @@
 #include <sys/mman.h>
 #include "mmap_override.h"
 
-void protect_region(void *addr, int size, int read, int write, int exec) {
+void protect_region(void *addr, long size, int read, int write, int exec) {
 
 }
 
-void prints(char *str, int size) {
+void prints(char *str, long size) {
   printf("%s", str);
 }
 
@@ -44,7 +44,7 @@ int platform_specific_setup() {
 #include <sys/mman.h>
 #include <unistd.h>
 
-void protect_region(void *addr, int size, int read, int write, int exec) {
+void protect_region(void *addr, long size, int read, int write, int exec) {
   int prot = 0;
   if(read)
     prot |= PROT_READ;
@@ -56,7 +56,7 @@ void protect_region(void *addr, int size, int read, int write, int exec) {
   mprotect(addr, size, prot);
 }
 
-void prints(char *str, int size) {
+void prints(char *str, long size) {
   write(STDOUT_FILENO, str, size);
 }
 

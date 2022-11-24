@@ -27,8 +27,8 @@ int from_char(char c) {
 }
 
 static inline  __attribute__((always_inline))
-int util_strtod(const char *s) {
-    int num = 0, base = 10;
+long util_strtod(const char *s) {
+    long num = 0, base = 10;
     char digit;
 
     if(s[0] == '0' && s[1] == 'x') {
@@ -75,15 +75,16 @@ void util_strcpy(char *dst, const const char *src)  {
 }
 
 static inline __attribute__((always_inline))
-void util_memcpy(char *dst, char *src, int size)  {
-    for(int i = 0; i < size; i++) 
+void util_memcpy(char *dst, char *src, long size)  {
+    for(long i = 0; i < size; i++) 
         *(dst++) = *(src++);
 }
 
 static inline __attribute__((always_inline))
-int util_snprintf(char *buf, int max, const char *format, uintptr_t args[]) {
+int util_snprintf(char *buf, long max, const char *format, uintptr_t args[]) {
     char c;
-    int state = 0, args_idx = 0, out_idx = 0;
+    int state = 0, args_idx = 0;
+    long out_idx = 0;
 
     while(((c = *format) != '\0') && (out_idx < max - 1)) {
         if(state == 0) { 
@@ -106,9 +107,9 @@ int util_snprintf(char *buf, int max, const char *format, uintptr_t args[]) {
                 out_idx -= 1;
             } else if(c == 'd' || c == 'x') {
                 int base = (c == 'd')? 10 : 16;
-                int val = (int)args[args_idx++];
+                long val = (long)args[args_idx++];
                 char ptit_buf[12];
-                int ptit_buf_idx = 0, neg = 0;
+                long ptit_buf_idx = 0, neg = 0;
                 if((val < 0) && (base != 16)) {
                     neg = 1;
                     val = -val;

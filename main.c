@@ -26,11 +26,11 @@ int __attribute__((noreturn)) main() {
     char *cmdstr;
     command_t cmd;
     char *prog;
-    int n_insts0, n_insts1;
+    long n_insts0, n_insts1;
     sandbox_t box0, box1;
     int ret;
 
-    int secret = 0xdeadc0de;
+    long secret = 0xdeadc0de;
 
     /* First, just initialize the engine */
     if((ret = engine_init()))
@@ -76,10 +76,10 @@ int __attribute__((noreturn)) main() {
     long main_secret_offset = 0;
     long other_secret_offset = 0;
 #ifdef TRY_LEAK_MAIN_SECRET
-    main_secret_offset = (int *)&secret - (int *)box1.ctx->arrays[0].base;
+    main_secret_offset = (long *)&secret - (long *)box1.ctx->arrays[0].base;
 #endif
 #ifdef TRY_LEAK_OTHER_PROG_SECRET
-    other_secret_offset = (int *)box0.ctx->arrays[0].base - (int *)box1.ctx->arrays[0].base;
+    other_secret_offset = (long *)box0.ctx->arrays[0].base - (long *)box1.ctx->arrays[0].base;
 #endif
     char program_buf[256];
     uintptr_t args[] = {
