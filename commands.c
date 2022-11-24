@@ -42,7 +42,7 @@ int execute_commands(const sandbox_t *box, app_context_t *ctx, long n_cmds) {
 
 int alloc_executor(const sandbox_t *box, app_context_t *ctx, const command_t *cmd) {
     const char *arrname = cmd->args[1];
-    long arrsize = util_strtod(cmd->args[2]);
+    long arrsize = util_strtol(cmd->args[2]);
 
     if(ctx->n_arrays >= MAX_ARRS)
         return -1;
@@ -62,7 +62,7 @@ int alloc_executor(const sandbox_t *box, app_context_t *ctx, const command_t *cm
 
 int get_executor(const sandbox_t *box, app_context_t *ctx, const command_t *cmd) {
     const char *arrname = cmd->args[1];
-    long idx = util_strtod(cmd->args[2]);
+    long idx = util_strtol(cmd->args[2]);
     const char *varname = cmd->args[3];
 
     if(!arrname || !varname)
@@ -100,8 +100,8 @@ int get_executor(const sandbox_t *box, app_context_t *ctx, const command_t *cmd)
 
 int set_executor(const sandbox_t *box, app_context_t *ctx, const command_t *cmd) {
     const char *arrname = cmd->args[1];
-    long idx = util_strtod(cmd->args[2]);
-    long value = util_strtod(cmd->args[3]);
+    long idx = util_strtol(cmd->args[2]);
+    long value = util_strtol(cmd->args[3]);
 
     if(!arrname)
         return -1;
@@ -145,7 +145,7 @@ void print_alloc(command_t cmd) {
     char buf[256];
     uintptr_t args[] = {
         (uintptr_t)cmd.args[1], 
-        (uintptr_t)util_strtod(cmd.args[2])
+        (uintptr_t)util_strtol(cmd.args[2])
     };
     long size = util_snprintf(buf, 256, "allocate array named %s, size %d\n", args);
     prints(buf, size);
@@ -155,7 +155,7 @@ void print_get(command_t cmd) {
     char buf[256];
     uintptr_t args[] = {
         (uintptr_t)cmd.args[1], 
-        (uintptr_t)util_strtod(cmd.args[2]), 
+        (uintptr_t)util_strtol(cmd.args[2]), 
         (uintptr_t)cmd.args[3]
     };
     long size = util_snprintf(buf, 256, "read array %s index %d into variable %s\n", args);
@@ -166,8 +166,8 @@ void print_set(command_t cmd) {
     char buf[256];
     uintptr_t args[] = {
         (uintptr_t)cmd.args[1], 
-        (uintptr_t)util_strtod(cmd.args[2]), 
-        (uintptr_t)util_strtod(cmd.args[3])
+        (uintptr_t)util_strtol(cmd.args[2]), 
+        (uintptr_t)util_strtol(cmd.args[3])
     };
     long size = util_snprintf(buf, 256, "set array %s index %d to %d\n", args);
     prints(buf, size);

@@ -27,9 +27,15 @@ int from_char(char c) {
 }
 
 static inline  __attribute__((always_inline))
-long util_strtod(const char *s) {
+long util_strtol(const char *s) {
     long num = 0, base = 10;
     char digit;
+    int neg = 0;
+
+    if(*s == '-') {
+        neg = 1;
+        s++;
+    }
 
     if(s[0] == '0' && s[1] == 'x') {
         base = 16;
@@ -41,7 +47,7 @@ long util_strtod(const char *s) {
         s++;
     }
     
-    return num;
+    return (neg)? -num: num;
 }
 
 static inline  __attribute__((always_inline))
