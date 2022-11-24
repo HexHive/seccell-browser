@@ -21,4 +21,9 @@
 #define COMP 0
 #endif
 
+#define TRY_LEAK_MAIN_SECRET
+#define TRY_LEAK_OTHER_PROG_SECRET
+
+#define DEBUG
+
 #endif /* CONFIG_H */

@@ -16,12 +16,12 @@ char to_char(int n) {
 
 static inline __attribute__((always_inline))
 int from_char(char c) {
-    if('0' <= c <= '9')
+    if('0' <= c && c <= '9')
         return c - '0';
-    else if('A' <= c <= 'Z')
-        return c - 'A';
-    else if('a' <= c <= 'z')
-        return c - 'a';
+    else if('A' <= c && c <= 'Z')
+        return c - 'A' + 10;
+    else if('a' <= c && c <= 'z')
+        return c - 'a' + 10;
     
     return 0;
 }
@@ -109,13 +109,14 @@ int util_snprintf(char *buf, int max, const char *format, uintptr_t args[]) {
                 int val = (int)args[args_idx++];
                 char ptit_buf[12];
                 int ptit_buf_idx = 0, neg = 0;
-                if(val < 0) {
+                if((val < 0) && (base != 16)) {
                     neg = 1;
                     val = -val;
                 }
                 do {
-                    ptit_buf[ptit_buf_idx++] = to_char(val % base);
-                    val /= base;
+                    int digit = (base == 16)? val & 0xf: val % base;
+                    ptit_buf[ptit_buf_idx++] = to_char(digit);
+                    val = (base == 16)? (unsigned)val >> 4: val / base;
                 } while(val != 0);
                 if(neg)
                     ptit_buf[ptit_buf_idx++] = '-';

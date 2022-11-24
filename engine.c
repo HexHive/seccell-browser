@@ -132,7 +132,11 @@ int sandbox_init(sandbox_t *box) {
     /* Copy executor into the code arena */
     void *space = sandbox_alloc(box, execute_commands_size, 1);
     util_memcpy(space, (void *)execute_commands, execute_commands_size);
+#ifdef DEBUG
+    box->execute = execute_commands;
+#else
     box->execute = space;
+#endif
     
     n_arenas_used++;
     return 0;
@@ -154,7 +158,11 @@ int sandbox_add_command(sandbox_t *box, command_t cmd) {
             if(!space)
                 return -1;
             util_memcpy(space, (void *)vocabulary[j].execute, executor_size);
+#ifdef DEBUG
+            box->cmds[cmd_idx].execute = vocabulary[j].execute;
+#else
             box->cmds[cmd_idx].execute = space;
+#endif
         }
 
     box->n_cmds++;
@@ -177,7 +185,7 @@ void sandbox_print_var(sandbox_t *box, const char *varname, int varvalue) {
         (uintptr_t)varname, 
         (uintptr_t)varvalue
     };
-    int size = util_snprintf(buf, 256, "%s: %d\n", args);
+    int size = util_snprintf(buf, 256, "%s: %x\n", args);
     prints(buf, size);
 }
 

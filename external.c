@@ -24,7 +24,7 @@ void *mmap_region(void *start, long len, int read, int write, int exec) {
   if(exec)
     prot |= PROT_EXEC;
   
-  return mmap_override(start, len, prot, MAP_PRIVATE, -1, 0);
+  return mmap_override(start, len, prot, MAP_ANONYMOUS, -1, 0);
 }
 
 void __attribute__((noreturn)) program_exit(int code) {
@@ -69,7 +69,7 @@ void *mmap_region(void *start, long len, int read, int write, int exec) {
   if(exec)
     prot |= PROT_EXEC;
 
-  return mmap(start, len, prot, MAP_PRIVATE, -1, 0);
+  return mmap(start, len, prot, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 }
 
 void __attribute__((noreturn)) program_exit(int code) {
