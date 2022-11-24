@@ -119,6 +119,27 @@ int sandbox_init(sandbox_t *box) {
     /* Allocating the sandbox an unused, empty arena */
     box->carena = alloc_arena();
     box->ctx = alloc_ctx();
+#if CONFIG_COMP
+    box->comp_id = allocate_compartment();
+    /* Compartment gets:
+     * 1. rx permission for trampoline code        // TODO: Reduce from all code section to only trampolines (create trampoline region) and sandbox_execute
+     * 2. rx permission for carena
+     * 3. rw permission for ctx
+     * 4. ro permission for sandbox                // TODO: Reduce from entire data section to only sandbox_t
+     * 5. rw permission for stack                  // TODO: Separate stack. Currently uses same range as code, including trampoline code
+     **/
+    //HACK: Instead should use the commented line below
+    compartment_permit(box->comp_id, sandbox_alloc_trampoline, 1, 1, 1);
+    // compartment_permit(box->comp_id, sandbox_alloc_trampoline, 1, 0, 1);
+    compartment_permit(box->comp_id, box->carena, 1, 0, 1);
+    compartment_permit(box->comp_id, box->ctx, 1, 1, 0);
+    //HACK: Should be uncommented. This is because the stack (including box) and code are in the same region
+    // compartment_permit(box->comp_id, box, 1, 0, 0);
+    /* Engine drops to
+     * rw permisison on carena 
+     **/
+    protect_region(box->carena, ARENA_SIZE, 1, 1, 0);
+#endif
 
     box->n_cmds = 0;
     box->c_used_bytes = 0;
@@ -132,7 +153,7 @@ int sandbox_init(sandbox_t *box) {
     /* Copy executor into the code arena */
     void *space = sandbox_alloc(box, execute_commands_size, 1);
     util_memcpy(space, (void *)execute_commands, execute_commands_size);
-#ifdef DEBUG
+#ifdef CONFIG_DEBUG
     box->execute = execute_commands;
 #else
     box->execute = space;
@@ -158,7 +179,7 @@ int sandbox_add_command(sandbox_t *box, command_t cmd) {
             if(!space)
                 return -1;
             util_memcpy(space, (void *)vocabulary[j].execute, executor_size);
-#ifdef DEBUG
+#ifdef CONFIG_DEBUG
             box->cmds[cmd_idx].execute = vocabulary[j].execute;
 #else
             box->cmds[cmd_idx].execute = space;
@@ -170,7 +191,14 @@ int sandbox_add_command(sandbox_t *box, command_t cmd) {
 }
 
 int sandbox_execute(sandbox_t *box, long n_cmds) {
-    return box->execute(box, box->ctx, n_cmds);
+#if CONFIG_COMP
+    switch_to_compartment(box->comp_id);
+#endif
+    int ret = box->execute(box, box->ctx, n_cmds);
+#if CONFIG_COMP
+    switch_to_compartment(1);
+#endif 
+    return ret;
 }
 
 void *sandbox_alloc_trampoline(sandbox_t *box, long size) {

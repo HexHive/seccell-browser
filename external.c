@@ -5,10 +5,19 @@
 #include <sel4platsupport/platsupport.h>
 #include <stdio.h>
 #include <sys/mman.h>
+#include <seccells/seccells.h>
 #include "mmap_override.h"
 
 void protect_region(void *addr, long size, int read, int write, int exec) {
+  int prot = 0;
+  if(read)
+    prot |= RT_R;
+  if(write)
+    prot |= RT_W;
+  if(exec)
+    prot |= RT_X;
 
+  prot(addr, prot);
 }
 
 void prints(char *str, long size) {
@@ -35,6 +44,36 @@ int platform_specific_setup() {
   /* Setup serial output via seL4_Debug_PutChar */
   if (platsupport_serial_setup_bootinfo_failsafe()) {
     /* Error occured during setup => terminate */
+    return 1;
+  }
+  return 0;
+}
+
+int allocate_compartment() {
+  seL4_RISCV_RangeTable_AddSecDiv_t ret;
+
+  ret = seL4_RISCV_RangeTable_AddSecDiv(seL4_CapInitThreadVSpace);
+  if (unlikely(ret.error != seL4_NoError)) {
+    return 1;
+  }
+  return ret.id;
+}
+
+int compartment_permit(int comp_id, void *addr, int read, int write, int exec) {
+  int perm = 0;
+  if(read)
+    perm |= RT_R;
+  if(write)
+    perm |= RT_W;
+  if(exec)
+    perm |= RT_X;
+  seL4_Error err;
+  
+  err = seL4_RISCV_RangeTable_GrantSecDivPermissions(seL4_CapInitThreadVSpace,
+                                                     (seL4_Word)comp_id,
+                                                     (seL4_Word)addr, 
+                                                     perm);
+  if (unlikely(err != seL4_NoError)) {
     return 1;
   }
   return 0;
@@ -77,6 +116,18 @@ void __attribute__((noreturn)) program_exit(int code) {
 }
 
 int platform_specific_setup() {
+  return 0;
+}
 
+int allocate_compartment() {
+  return 0; 
+}
+
+int compartment_permit(int comp_id, void *addr, int read, int write, int exec) {
+  return 0;
+}
+
+inline int switch_to_compartment(int comp_id) {
+  return 0;  
 }
 #endif

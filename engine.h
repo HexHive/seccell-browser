@@ -76,6 +76,10 @@ typedef struct sandbox {
 
     app_executor_t execute;
     app_context_t *ctx;
+
+#if CONFIG_COMP
+    unsigned comp_id;
+#endif
 } sandbox_t;
 
 int engine_init();

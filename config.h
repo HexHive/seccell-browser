@@ -12,18 +12,19 @@
 #include "seL4-playground/gen_config.h"
 
 #if CONFIG_EVAL_TYPE_UNCOMP
-#define COMP 0
+#define CONFIG_COMP 0
 #elif CONFIG_EVAL_TYPE_COMP
-#define COMP 1
+#define CONFIG_COMP 1
 #endif
 
 #else  /* Assuming Linux */
-#define COMP 0
+#define CONFIG_COMP 0
 #endif
 
-#define TRY_LEAK_MAIN_SECRET
-#define TRY_LEAK_OTHER_PROG_SECRET
+// #define TRY_LEAK_MAIN_SECRET
+// #define TRY_LEAK_OTHER_PROG_SECRET
+//TODO: Include defines to enable overwrites
 
-#define DEBUG
+// #define CONFIG_DEBUG
 
 #endif /* CONFIG_H */
