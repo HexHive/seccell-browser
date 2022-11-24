@@ -3,7 +3,7 @@
 
 #define MAX_ARGS   (1 + 4)
 #define MAX_CMDS   0x100
-#define MAX_ARENAS 0x10
+#define MAX_SANDBOXES 0x10
 #define ARENA_SIZE 0x4000
 #define MAX_VARS   0x10
 #define MAX_VAR_SZ 0x10
@@ -47,12 +47,20 @@ typedef struct array {
     char name[MAX_VAR_SZ];
     void *base;
 } array_t;
+
+typedef char arena_t[ARENA_SIZE];
+extern arena_t arenas[MAX_SANDBOXES];
+extern int     n_arenas_used;
+
 typedef struct app_context {
     var_t vars[MAX_VARS];
     int n_vars;
 
     array_t arrays[MAX_ARRS];
     int n_arrays;
+
+    arena_t darena;
+    int d_used_bytes;
 
     int cur_code_idx;
 
@@ -68,15 +76,12 @@ typedef struct sandbox {
     void *cmd_code_ptrs[MAX_CMDS];
     int n_cmds;
 
-    void *arena;        /* Generated code is put in the arena */
-    int used_bytes;
+    void *carena;        /* Generated code is put in the arena */
+    int c_used_bytes;
 
     app_executor_t execute;
-    app_context_t ctx;
+    app_context_t *ctx;
 } sandbox_t;
-typedef char arena_t[ARENA_SIZE];
-extern arena_t arenas[MAX_ARENAS];
-extern int     n_arenas_used;
 
 int engine_init();
 

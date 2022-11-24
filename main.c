@@ -18,6 +18,8 @@ int main() {
     int n_insts0 = 0;
     sandbox_t box0;
 
+    engine_init();
+
     sandbox_init(&box0);
     while((cmdstr = command_next(&prog))) {
         n_insts0++;

@@ -20,7 +20,7 @@ void prints(char *str, int size) {
   write(STDOUT_FILENO, str, size);
 }
 
-void *mmap_region(void *start, size_t len, int read, int write, int exec) {
+void *mmap_region(void *start, long len, int read, int write, int exec) {
   int prot = 0;
   if(read)
     prot |= PROT_READ;
@@ -43,7 +43,7 @@ void prints(char *str, int size) {
   printf("%s", str);
 }
 
-void *mmap_region(void *start, size_t len, int read, int write, int exec) {
+void *mmap_region(void *start, long len, int read, int write, int exec) {
   int prot = 0;
   if(read)
     prot |= PROT_READ;

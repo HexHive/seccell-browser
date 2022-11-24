@@ -72,15 +72,32 @@ command_type_t vocabulary[] = {
 };
 int vocabulary_size = sizeof(vocabulary) / sizeof(vocabulary[0]);
 
-#ifdef __linux__
-arena_t arenas[MAX_ARENAS] __attribute__((aligned(ARENA_SIZE)));
+#ifdef __linux__  /* Linux */
+arena_t carenas[MAX_SANDBOXES] __attribute__((aligned(ARENA_SIZE)));
+app_context_t ctxs[MAX_SANDBOXES];
 int engine_init() {
-    protect_region(arenas, MAX_ARENAS * ARENA_SIZE, 1, 1, 1);
+    init_command_sizes();
+    protect_region(carenas, MAX_SANDBOXES * ARENA_SIZE, 1, 1, 1);
+}
+static void *alloc_arena() {
+    return &carenas[n_arenas_used];
+}
+static void *alloc_ctx() {
+    return &ctxs[n_arenas_used];
 }
 #else /* Assume Seccell */
 arena_t *arenas;
 int engine_init() {
-    arenas = mmap_region(NULL, MAX_ARENAS * ARENA_SIZE, 1, 1, 1);
+    init_command_sizes();
+    arenas = mmap_region(NULL, MAX_SANDBOXES * ARENA_SIZE, 1, 1, 1);
+}
+static void *alloc_arena() {
+    // TODO: replace with mmap
+    return NULL;
+}
+static void *alloc_ctx() {
+    // TODO: replace with mmap
+    return NULL;
 }
 #endif
 int     n_arenas_used = 0;
@@ -88,40 +105,49 @@ int     n_arenas_used = 0;
 // TODO: Possibly allocate illegal instructions between the 
 // existing allocation and the new one, in order to catch some
 // bugs
-static void *sandbox_alloc(sandbox_t *box, int size) {
-    char *reg = box->arena + box->used_bytes;
-    if(box->used_bytes + size > ARENA_SIZE)
+static void *sandbox_alloc(sandbox_t *box, int size, int code) {
+    char *reg;
+    int *reg_used_bytes;
+
+    if(code) {
+        reg = box->carena;
+        reg_used_bytes = &box->c_used_bytes;
+    } else {
+        reg = &box->ctx->darena[0];
+        reg_used_bytes = &box->ctx->d_used_bytes;
+    }
+    reg += *reg_used_bytes;
+
+    if(*reg_used_bytes + size > ARENA_SIZE)
         return NULL;
-    
-    box->used_bytes += size;
+    *reg_used_bytes += size;
+
     return reg;
 }
 
 int sandbox_init(sandbox_t *box) {
-    if(n_arenas_used >= MAX_ARENAS)
+    if(n_arenas_used >= MAX_SANDBOXES)
         return -1;
     
     /* Allocating the sandbox an unused, empty arena */
+    box->carena = alloc_arena();
+    box->ctx = alloc_ctx();
+
     box->n_cmds = 0;
-    box->arena = arenas[n_arenas_used];
-    n_arenas_used++;
-    box->used_bytes = 0;
+    box->c_used_bytes = 0;
 
-    init_command_sizes();
+    box->ctx->n_arrays = 0;
+    box->ctx->n_vars   = 0;
+    box->ctx->cur_code_idx = 0;
+    box->ctx->allocator = sandbox_alloc_trampoline;
+    box->ctx->print_var = sandbox_print_var_trampoline;
 
-    /* Copy executor into the arena */
-    void *space = sandbox_alloc(box, execute_commands_size);
+    /* Copy executor into the code arena */
+    void *space = sandbox_alloc(box, execute_commands_size, 1);
     util_memcpy(space, (void *)execute_commands, execute_commands_size);
-
-    box->ctx.n_arrays = 0;
-    box->ctx.n_vars   = 0;
-    box->ctx.cur_code_idx = 0;
-    box->ctx.allocator = sandbox_alloc_trampoline;
-    box->ctx.print_var = sandbox_print_var_trampoline;
-
     box->execute = space;
-    // box->execute = execute_commands;
-
+    
+    n_arenas_used++;
     return 0;
 }
 
@@ -137,7 +163,7 @@ int sandbox_add_command(sandbox_t *box, command_t cmd) {
             /* Copy code for the command into the arena and set the 
              * executor accordingly */
             int executor_size = *vocabulary[j].executor_sizep;
-            void *space = sandbox_alloc(box,  executor_size);
+            void *space = sandbox_alloc(box,  executor_size, 1);
             if(!space)
                 return -1;
             util_memcpy(space, (void *)vocabulary[j].execute, executor_size);
@@ -149,13 +175,13 @@ int sandbox_add_command(sandbox_t *box, command_t cmd) {
 }
 
 int sandbox_execute(sandbox_t *box, int n_cmds) {
-    return box->execute(box, &box->ctx, n_cmds);
+    return box->execute(box, box->ctx, n_cmds);
 }
 
 void *sandbox_alloc_trampoline(sandbox_t *box, int size) {
     // TODO: Implement compartment switching here
 
-    return sandbox_alloc(box, size);
+    return sandbox_alloc(box, size, 0);
 }
 
 void sandbox_print_var(sandbox_t *box, const char *varname, int varvalue) {
