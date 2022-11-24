@@ -72,8 +72,18 @@ command_type_t vocabulary[] = {
 };
 int vocabulary_size = sizeof(vocabulary) / sizeof(vocabulary[0]);
 
+#ifdef __linux__
 arena_t arenas[MAX_ARENAS] __attribute__((aligned(ARENA_SIZE)));
-int     n_arenas_used;
+int engine_init() {
+    protect_region(arenas, MAX_ARENAS * ARENA_SIZE, 1, 1, 1);
+}
+#else /* Assume Seccell */
+arena_t *arenas;
+int engine_init() {
+    arenas = mmap_region(NULL, MAX_ARENAS * ARENA_SIZE, 1, 1, 1);
+}
+#endif
+int     n_arenas_used = 0;
 
 // TODO: Possibly allocate illegal instructions between the 
 // existing allocation and the new one, in order to catch some
@@ -96,7 +106,6 @@ int sandbox_init(sandbox_t *box) {
     box->arena = arenas[n_arenas_used];
     n_arenas_used++;
     box->used_bytes = 0;
-    protect_region(box->arena, ARENA_SIZE, 1, 1, 1);
 
     init_command_sizes();
 

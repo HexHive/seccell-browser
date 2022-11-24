@@ -78,6 +78,8 @@ typedef char arena_t[ARENA_SIZE];
 extern arena_t arenas[MAX_ARENAS];
 extern int     n_arenas_used;
 
+int engine_init();
+
 int sandbox_init(sandbox_t *box);
 int sandbox_add_command(sandbox_t *box, command_t cmd);
 int sandbox_execute(sandbox_t *box, int n_cmds);
