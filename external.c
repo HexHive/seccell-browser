@@ -1,7 +1,6 @@
 #include "external.h"
 
 #ifdef SEL4
-#include "seL4-playground/gen_config.h"
 #include <sel4/sel4.h>
 #include <sel4platsupport/platsupport.h>
 #include <stdio.h>
@@ -28,8 +27,17 @@ void *mmap_region(void *start, long len, int read, int write, int exec) {
   return mmap_override(start, len, prot, MAP_PRIVATE, -1, 0);
 }
 
-void program_exit() {
-    seL4_TCB_Suspend(seL4_CapInitThreadTCB);
+void __attribute__((noreturn)) program_exit(int code) {
+  seL4_TCB_Suspend(seL4_CapInitThreadTCB);
+}
+
+int platform_specific_setup() {
+  /* Setup serial output via seL4_Debug_PutChar */
+  if (platsupport_serial_setup_bootinfo_failsafe()) {
+    /* Error occured during setup => terminate */
+    return 1;
+  }
+  return 0;
 }
 
 #else /* Assuming Linux */
@@ -64,7 +72,11 @@ void *mmap_region(void *start, long len, int read, int write, int exec) {
   return mmap(start, len, prot, MAP_PRIVATE, -1, 0);
 }
 
-void program_exit() {
+void __attribute__((noreturn)) program_exit(int code) {
+  _exit(code);
+}
+
+int platform_specific_setup() {
 
 }
 #endif

@@ -1,9 +1,3 @@
-#ifdef SEL4
-#include "seL4-playground/gen_config.h"
-#include <sel4/sel4.h>
-#include <sel4platsupport/platsupport.h>
-#endif 
-
 #include "commands.h"
 #include "external.h"
 #include "engine.h"
@@ -78,17 +72,15 @@ command_type_t vocabulary[] = {
 };
 int vocabulary_size = sizeof(vocabulary) / sizeof(vocabulary[0]);
 
-#ifdef SEL4  /* seL4 */
-arena_t *arenas;
-#include <stdio.h>
+int     n_arenas_used = 0;
 int engine_init() {
-    /* Setup serial output via seL4_Debug_PutChar */
-    if (platsupport_serial_setup_bootinfo_failsafe()) {
-        /* Error occured during setup => terminate */
+    if(platform_specific_setup())
         return 1;
-    }
 
     init_command_sizes();
+    n_arenas_used = 0;
+
+    return 0;
 }
 static void *alloc_arena() {
     return mmap_region(NULL, ARENA_SIZE, 1, 1, 1);;
@@ -96,21 +88,6 @@ static void *alloc_arena() {
 static void *alloc_ctx() {
     return mmap_region(NULL, sizeof(app_context_t), 1, 1, 0);;
 }
-#else /* Assume basic Linux */
-arena_t carenas[MAX_SANDBOXES] __attribute__((aligned(ARENA_SIZE)));
-app_context_t ctxs[MAX_SANDBOXES];
-int engine_init() {
-    init_command_sizes();
-    protect_region(carenas, MAX_SANDBOXES * ARENA_SIZE, 1, 1, 1);
-}
-static void *alloc_arena() {
-    return &carenas[n_arenas_used];
-}
-static void *alloc_ctx() {
-    return &ctxs[n_arenas_used];
-}
-#endif
-int     n_arenas_used = 0;
 
 // TODO: Possibly allocate illegal instructions between the 
 // existing allocation and the new one, in order to catch some

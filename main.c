@@ -12,29 +12,35 @@ char program0[] =
     "print var1;"
 ;
 
-int main() {
+int __attribute__((noreturn)) main() {
     char *cmdstr;
     command_t cmd;
     char *prog = program0;
     int n_insts0 = 0;
     sandbox_t box0;
+    int ret;
 
-    engine_init();
+    if((ret = engine_init()))
+        goto error;
 
     sandbox_init(&box0);
     while((cmdstr = command_next(&prog))) {
         n_insts0++;
         if(command_decode(cmdstr, &cmd) != 0)
-            break;
+            goto error;
         
-        sandbox_add_command(&box0, cmd);
+        if(sandbox_add_command(&box0, cmd))
+            goto error;
     }
 
-    sandbox_execute(&box0, n_insts0);
+    if(sandbox_execute(&box0, n_insts0))
+        goto error;
 
+    goto success;
 
-
+error:
+    prints("Error\n", 6);
+success:
     prints("Fini\n", 5);
-    program_exit();
-    return 0;
+    program_exit(ret);
 }
