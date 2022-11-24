@@ -1,4 +1,5 @@
 #include "engine.h"
+#include "external.h"
 
 char program0[] = 
     "alloc arr, 10;"
@@ -30,4 +31,10 @@ int main() {
     }
 
     sandbox_execute(&box0, n_insts0);
+
+
+
+    prints("Fini\n", 5);
+    program_exit();
+    return 0;
 }

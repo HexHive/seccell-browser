@@ -89,15 +89,12 @@ int engine_init() {
     }
 
     init_command_sizes();
-    arenas = mmap_region(NULL, MAX_SANDBOXES * ARENA_SIZE, 1, 1, 1);
 }
 static void *alloc_arena() {
-    // TODO: replace with mmap
-    return NULL;
+    return mmap_region(NULL, ARENA_SIZE, 1, 1, 1);;
 }
 static void *alloc_ctx() {
-    // TODO: replace with mmap
-    return NULL;
+    return mmap_region(NULL, sizeof(app_context_t), 1, 1, 0);;
 }
 #else /* Assume basic Linux */
 arena_t carenas[MAX_SANDBOXES] __attribute__((aligned(ARENA_SIZE)));

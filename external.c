@@ -1,6 +1,9 @@
 #include "external.h"
 
 #ifdef SEL4
+#include "seL4-playground/gen_config.h"
+#include <sel4/sel4.h>
+#include <sel4platsupport/platsupport.h>
 #include <stdio.h>
 #include <sys/mman.h>
 #include "mmap_override.h"
@@ -23,6 +26,10 @@ void *mmap_region(void *start, long len, int read, int write, int exec) {
     prot |= PROT_EXEC;
   
   return mmap_override(start, len, prot, MAP_PRIVATE, -1, 0);
+}
+
+void program_exit() {
+    seL4_TCB_Suspend(seL4_CapInitThreadTCB);
 }
 
 #else /* Assuming Linux */
@@ -57,4 +64,7 @@ void *mmap_region(void *start, long len, int read, int write, int exec) {
   return mmap(start, len, prot, MAP_PRIVATE, -1, 0);
 }
 
+void program_exit() {
+
+}
 #endif
