@@ -1,13 +1,9 @@
 #ifndef ENGINE_H
 #define ENGINE_H
 
+#include "config.h"
+
 #define MAX_ARGS   (1 + 4)
-#define MAX_CMDS   0x100
-#define MAX_SANDBOXES 0x10
-#define ARENA_SIZE 0x4000
-#define MAX_VARS   0x10
-#define MAX_VAR_SZ 0x10
-#define MAX_ARRS   0x10
 
 typedef struct app_context app_context_t;
 typedef struct command     command_t;
@@ -49,7 +45,6 @@ typedef struct array {
 } array_t;
 
 typedef char arena_t[ARENA_SIZE];
-extern arena_t arenas[MAX_SANDBOXES];
 extern int     n_arenas_used;
 
 typedef struct app_context {

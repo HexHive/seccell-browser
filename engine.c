@@ -1,3 +1,9 @@
+#ifdef SEL4
+#include "seL4-playground/gen_config.h"
+#include <sel4/sel4.h>
+#include <sel4platsupport/platsupport.h>
+#endif 
+
 #include "commands.h"
 #include "external.h"
 #include "engine.h"
@@ -72,7 +78,28 @@ command_type_t vocabulary[] = {
 };
 int vocabulary_size = sizeof(vocabulary) / sizeof(vocabulary[0]);
 
-#ifdef __linux__  /* Linux */
+#ifdef SEL4  /* seL4 */
+arena_t *arenas;
+#include <stdio.h>
+int engine_init() {
+    /* Setup serial output via seL4_Debug_PutChar */
+    if (platsupport_serial_setup_bootinfo_failsafe()) {
+        /* Error occured during setup => terminate */
+        return 1;
+    }
+
+    init_command_sizes();
+    arenas = mmap_region(NULL, MAX_SANDBOXES * ARENA_SIZE, 1, 1, 1);
+}
+static void *alloc_arena() {
+    // TODO: replace with mmap
+    return NULL;
+}
+static void *alloc_ctx() {
+    // TODO: replace with mmap
+    return NULL;
+}
+#else /* Assume basic Linux */
 arena_t carenas[MAX_SANDBOXES] __attribute__((aligned(ARENA_SIZE)));
 app_context_t ctxs[MAX_SANDBOXES];
 int engine_init() {
@@ -84,20 +111,6 @@ static void *alloc_arena() {
 }
 static void *alloc_ctx() {
     return &ctxs[n_arenas_used];
-}
-#else /* Assume Seccell */
-arena_t *arenas;
-int engine_init() {
-    init_command_sizes();
-    arenas = mmap_region(NULL, MAX_SANDBOXES * ARENA_SIZE, 1, 1, 1);
-}
-static void *alloc_arena() {
-    // TODO: replace with mmap
-    return NULL;
-}
-static void *alloc_ctx() {
-    // TODO: replace with mmap
-    return NULL;
 }
 #endif
 int     n_arenas_used = 0;
