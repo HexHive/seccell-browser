@@ -126,8 +126,4 @@ int allocate_compartment() {
 int compartment_permit(int comp_id, void *addr, int read, int write, int exec) {
   return 0;
 }
-
-inline int switch_to_compartment(int comp_id) {
-  return 0;  
-}
 #endif

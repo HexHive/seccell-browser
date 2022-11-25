@@ -57,11 +57,10 @@ typedef struct app_context {
     arena_t darena;
     long d_used_bytes;
 
+    /* List of trampolines for callbacks into the Engine */
+    void *(*allocator_trampoline)(sandbox_t *box, long size);
+    void (*print_var_trampoline)(sandbox_t *box, const char *var, long val);
     long cur_code_idx;
-
-    /* List of callbacks into the Engine */
-    void *(*allocator)(sandbox_t *box, long size);
-    void (*print_var)(sandbox_t *box, const char *var, long val);
 } app_context_t;
 
 typedef int (*app_executor_t)(const sandbox_t *box, app_context_t *ctx, long n_cmds);
@@ -74,8 +73,18 @@ typedef struct sandbox {
     void *carena;        /* Generated code is put in the arena */
     long c_used_bytes;
 
+    void *trampoline_carena;
+    long t_carena_used_bytes;
+
     app_executor_t execute;
     app_context_t *ctx;
+
+    /* List of callbacks into the Engine */
+    void *(*allocator)(sandbox_t *box, long size);
+    void (*print_var)(sandbox_t *box, const char *var, long val);
+
+    /* Entry trampoline */
+    int (*sandbox_entry_trampoline)(sandbox_t *box, long n_cmds);
 
 #if CONFIG_COMP
     unsigned comp_id;
@@ -87,9 +96,5 @@ int engine_init();
 int sandbox_init(sandbox_t *box);
 int sandbox_add_command(sandbox_t *box, command_t cmd);
 int sandbox_execute(sandbox_t *box, long n_cmds);
-
-/* Callbacks from the webapp to the sandbox */
-void *sandbox_alloc_trampoline(sandbox_t *box, long size);
-void sandbox_print_var_trampoline(sandbox_t *box, const char *var, long val);
 
 #endif /* ENGINE_H */

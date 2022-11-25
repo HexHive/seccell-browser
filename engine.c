@@ -89,6 +89,16 @@ static void *alloc_ctx() {
     return mmap_region(NULL, sizeof(app_context_t), 1, 1, 0);;
 }
 
+static void *__sandbox_alloc(char *reg, long *reg_used_bytes, long size) {
+    reg += *reg_used_bytes;
+
+    if(*reg_used_bytes + size > ARENA_SIZE)
+        return NULL;
+    *reg_used_bytes += size;
+
+    return reg;
+}
+
 // TODO: Possibly allocate illegal instructions between the 
 // existing allocation and the new one, in order to catch some
 // bugs
@@ -103,13 +113,22 @@ static void *sandbox_alloc(sandbox_t *box, long size, int code) {
         reg = &box->ctx->darena[0];
         reg_used_bytes = &box->ctx->d_used_bytes;
     }
-    reg += *reg_used_bytes;
 
-    if(*reg_used_bytes + size > ARENA_SIZE)
-        return NULL;
-    *reg_used_bytes += size;
+    return __sandbox_alloc(reg, reg_used_bytes, size);
+}
 
-    return reg;
+void *sandbox_alloc_data(sandbox_t *box, long size) {
+    return sandbox_alloc(box, size, 0);
+}
+
+void sandbox_print_var(sandbox_t *box, const char *varname, long varvalue) {
+    char buf[256];
+    uintptr_t args[] = {
+        (uintptr_t)varname, 
+        (uintptr_t)varvalue
+    };
+    long size = util_snprintf(buf, 256, "%s: %x\n", args);
+    prints(buf, size);
 }
 
 int sandbox_init(sandbox_t *box) {
@@ -118,45 +137,54 @@ int sandbox_init(sandbox_t *box) {
     
     /* Allocating the sandbox an unused, empty arena */
     box->carena = alloc_arena();
+    box->c_used_bytes = 0;
+    box->trampoline_carena = alloc_arena();
+    box->t_carena_used_bytes = 0;
     box->ctx = alloc_ctx();
+    box->allocator = sandbox_alloc_data;
+    box->print_var = sandbox_print_var;
+    box->n_cmds = 0;
+    box->execute = sandbox_alloc(box, execute_commands_size, 1);
+    box->sandbox_entry_trampoline = __sandbox_alloc(box->trampoline_carena, &box->t_carena_used_bytes, sandbox_entry_trampoline_size);
+
+    /* Set up context, including pointers to copied trampolines */
+    box->ctx->n_arrays = 0;
+    box->ctx->n_vars   = 0;
+    box->ctx->cur_code_idx = 0;
+    box->ctx->allocator_trampoline = __sandbox_alloc(box->trampoline_carena, &box->t_carena_used_bytes, alloc_trampoline_size);
+    box->ctx->print_var_trampoline = __sandbox_alloc(box->trampoline_carena, &box->t_carena_used_bytes, print_var_trampoline_size);
+
+    /* Copy executor into the code arena, trampolines into trampoline arena */
+    util_memcpy((void *)box->execute, (void *)execute_commands, execute_commands_size);
+    util_memcpy((void *)box->sandbox_entry_trampoline, (void *)sandbox_entry_trampoline, sandbox_entry_trampoline_size);
+    util_memcpy((void *)box->ctx->allocator_trampoline, (void *)alloc_trampoline, alloc_trampoline_size);
+    util_memcpy((void *)box->ctx->print_var_trampoline, (void *)print_var_trampoline, print_var_trampoline_size);
+
+#ifdef CONFIG_DEBUG
+    box->execute = execute_commands;
+#endif
+
 #if CONFIG_COMP
     box->comp_id = allocate_compartment();
     /* Compartment gets:
-     * 1. rx permission for trampoline code        // TODO: Reduce from all code section to only trampolines (create trampoline region) and sandbox_execute
-     * 2. rx permission for carena
+     * 1. rx permission for carena  
+     * 2. rx permission for trampoline arena 
      * 3. rw permission for ctx
      * 4. ro permission for sandbox                // TODO: Reduce from entire data section to only sandbox_t
      * 5. rw permission for stack                  // TODO: Separate stack. Currently uses same range as code, including trampoline code
      **/
-    //HACK: Instead should use the commented line below
-    compartment_permit(box->comp_id, sandbox_alloc_trampoline, 1, 1, 1);
-    // compartment_permit(box->comp_id, sandbox_alloc_trampoline, 1, 0, 1);
     compartment_permit(box->comp_id, box->carena, 1, 0, 1);
+    compartment_permit(box->comp_id, box->trampoline_carena, 1, 0, 1);
     compartment_permit(box->comp_id, box->ctx, 1, 1, 0);
     //HACK: Should be uncommented. This is because the stack (including box) and code are in the same region
+    compartment_permit(box->comp_id, box, 1, 1, 0);
     // compartment_permit(box->comp_id, box, 1, 0, 0);
-    /* Engine drops to
-     * rw permisison on carena 
+    /* Engine drops to:
+     * 1. rw permission on carena 
+     * 2. rx permission on trampoline arena
      **/
     protect_region(box->carena, ARENA_SIZE, 1, 1, 0);
-#endif
-
-    box->n_cmds = 0;
-    box->c_used_bytes = 0;
-
-    box->ctx->n_arrays = 0;
-    box->ctx->n_vars   = 0;
-    box->ctx->cur_code_idx = 0;
-    box->ctx->allocator = sandbox_alloc_trampoline;
-    box->ctx->print_var = sandbox_print_var_trampoline;
-
-    /* Copy executor into the code arena */
-    void *space = sandbox_alloc(box, execute_commands_size, 1);
-    util_memcpy(space, (void *)execute_commands, execute_commands_size);
-#ifdef CONFIG_DEBUG
-    box->execute = execute_commands;
-#else
-    box->execute = space;
+    protect_region(box->trampoline_carena, ARENA_SIZE, 1, 0, 1);
 #endif
     
     n_arenas_used++;
@@ -184,6 +212,7 @@ int sandbox_add_command(sandbox_t *box, command_t cmd) {
 #else
             box->cmds[cmd_idx].execute = space;
 #endif
+            break;
         }
 
     box->n_cmds++;
@@ -191,44 +220,5 @@ int sandbox_add_command(sandbox_t *box, command_t cmd) {
 }
 
 int sandbox_execute(sandbox_t *box, long n_cmds) {
-#if CONFIG_COMP
-    switch_to_compartment(box->comp_id);
-#endif
-    int ret = box->execute(box, box->ctx, n_cmds);
-#if CONFIG_COMP
-    switch_to_compartment(1);
-#endif 
-    return ret;
-}
-
-void *sandbox_alloc_trampoline(sandbox_t *box, long size) {
-#if CONFIG_COMP
-    switch_to_compartment(1);
-#endif
-    void *ret = sandbox_alloc(box, size, 0);
-#if CONFIG_COMP
-    switch_to_compartment(box->comp_id);
-#endif
-
-    return ret;
-}
-
-void sandbox_print_var(sandbox_t *box, const char *varname, long varvalue) {
-    char buf[256];
-    uintptr_t args[] = {
-        (uintptr_t)varname, 
-        (uintptr_t)varvalue
-    };
-    long size = util_snprintf(buf, 256, "%s: %x\n", args);
-    prints(buf, size);
-}
-
-void sandbox_print_var_trampoline(sandbox_t *box, const char *var, long val) {
-#if CONFIG_COMP
-    switch_to_compartment(1);
-#endif
-    sandbox_print_var(box, var, val);
-#if CONFIG_COMP
-    switch_to_compartment(box->comp_id);
-#endif
+    return box->sandbox_entry_trampoline(box, n_cmds);
 }

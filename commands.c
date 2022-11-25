@@ -3,19 +3,58 @@
 #include "engine.h"
 #include "util.h"
 
+long alloc_trampoline_size;
+long print_var_trampoline_size;
+long sandbox_entry_trampoline_size;
 long execute_commands_size;
 long alloc_executor_size;
 long get_executor_size;
 long set_executor_size;
 long print_executor_size;
+
 void init_command_sizes() {
     /* It does not matter if these sizes are not exact. 
      * They need to be at least as big as the actual size, bigger is ok */
-    execute_commands_size = (long)(uintptr_t)alloc_executor - (long)(uintptr_t)execute_commands;
-    alloc_executor_size   = (long)(uintptr_t)get_executor   - (long)(uintptr_t)alloc_executor  ;
-    get_executor_size     = (long)(uintptr_t)set_executor   - (long)(uintptr_t)get_executor    ;
-    set_executor_size     = (long)(uintptr_t)print_executor - (long)(uintptr_t)set_executor    ;
-    print_executor_size   = (long)(uintptr_t)print_alloc    - (long)(uintptr_t)print_executor  ;
+    alloc_trampoline_size         = (long)(uintptr_t)print_var_trampoline     - (long)(uintptr_t)alloc_trampoline;
+    print_var_trampoline_size     = (long)(uintptr_t)sandbox_entry_trampoline - (long)(uintptr_t)print_var_trampoline;
+    sandbox_entry_trampoline_size = (long)(uintptr_t)execute_commands         - (long)(uintptr_t)sandbox_entry_trampoline;
+    execute_commands_size         = (long)(uintptr_t)alloc_executor           - (long)(uintptr_t)execute_commands;
+    alloc_executor_size           = (long)(uintptr_t)get_executor             - (long)(uintptr_t)alloc_executor  ;
+    get_executor_size             = (long)(uintptr_t)set_executor             - (long)(uintptr_t)get_executor    ;
+    set_executor_size             = (long)(uintptr_t)print_executor           - (long)(uintptr_t)set_executor    ;
+    print_executor_size           = (long)(uintptr_t)print_alloc              - (long)(uintptr_t)print_executor  ;
+}
+
+void *alloc_trampoline(sandbox_t *box, long size) {
+#if CONFIG_COMP
+    switch_to_compartment(1);
+#endif
+    void *ret = box->allocator(box, size);
+#if CONFIG_COMP
+    switch_to_compartment(box->comp_id);
+#endif
+
+    return ret;
+}
+void print_var_trampoline(sandbox_t *box, const char *var, long val) {
+#if CONFIG_COMP
+    switch_to_compartment(1);
+#endif
+    box->print_var(box, var, val);
+#if CONFIG_COMP
+    switch_to_compartment(box->comp_id);
+#endif
+}
+
+int sandbox_entry_trampoline(sandbox_t *box, long n_cmds) {
+#if CONFIG_COMP
+    switch_to_compartment(box->comp_id);
+#endif
+    int ret = box->execute(box, box->ctx, n_cmds);
+#if CONFIG_COMP
+    switch_to_compartment(1);
+#endif 
+    return ret;
 }
 
 /* Returns the number of commands not executed */
@@ -51,7 +90,7 @@ int alloc_executor(const sandbox_t *box, app_context_t *ctx, const command_t *cm
         if(util_strcmp(ctx->arrays[i].name, arrname) == 0)
             return -1;
 
-    long *alloc_base = ctx->allocator((sandbox_t *)box, arrsize * sizeof(long));
+    long *alloc_base = ctx->allocator_trampoline((sandbox_t *)box, arrsize * sizeof(long));
 
     util_strcpy(ctx->arrays[ctx->n_arrays].name, arrname);
     ctx->arrays[ctx->n_arrays].base = alloc_base;
@@ -136,7 +175,7 @@ int print_executor(const sandbox_t *box, app_context_t *ctx, const command_t *cm
     if(!varvalue)
         return -1;
 
-    ctx->print_var((sandbox_t *)box, varname, *varvalue);
+    ctx->print_var_trampoline((sandbox_t *)box, varname, *varvalue);
 
     return 0;
 }
