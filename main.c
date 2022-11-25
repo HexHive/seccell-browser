@@ -22,15 +22,15 @@ char program1[] =
     "print othersecret;"
 ;
 
+long secret = 0xdeadc0de;
+
 int __attribute__((noreturn)) main() {
     char *cmdstr;
     command_t cmd;
     char *prog;
     long n_insts0, n_insts1;
-    sandbox_t box0, box1;
+    sandbox_t *box0, *box1;
     int ret;
-
-    long secret = 0xdeadc0de;
 
     /* First, just initialize the engine */
     if((ret = engine_init()))
@@ -40,7 +40,7 @@ int __attribute__((noreturn)) main() {
      * and execute it all.
      * Executing this program ensures that its secret has
      * been written to its data context */
-    if(sandbox_init(&box0))
+    if((box0 = sandbox_alloc_init()) == NULL)
         goto error;
     prog = program0;
     n_insts0 = 0;
@@ -49,16 +49,16 @@ int __attribute__((noreturn)) main() {
         if(command_decode(cmdstr, &cmd) != 0)
             goto error;
         
-        if(sandbox_add_command(&box0, cmd))
+        if(sandbox_add_command(box0, cmd))
             goto error;
     }
 
-    if(sandbox_execute(&box0, n_insts0))
+    if(sandbox_execute(box0, n_insts0))
         goto error;
 
     /* Spawn second sandbox, which tries to leak 
      * secrets from other sandboxes or secret above */
-    if(sandbox_init(&box1))
+    if((box1 = sandbox_alloc_init()) == NULL)
         goto error;
     prog = program1;
 
@@ -67,19 +67,19 @@ int __attribute__((noreturn)) main() {
     cmdstr = command_next(&prog);
     if(command_decode(cmdstr, &cmd) != 0)
         goto error;
-    if(sandbox_add_command(&box1, cmd))
+    if(sandbox_add_command(box1, cmd))
         goto error;
-    if(sandbox_execute(&box1, 1))
+    if(sandbox_execute(box1, 1))
         goto error;
 
     /* Determine the offsets to the secrets, if required*/
     long main_secret_offset = 0;
     long other_secret_offset = 0;
 #ifdef TRY_LEAK_MAIN_SECRET
-    main_secret_offset = (long *)&secret - (long *)box1.ctx->arrays[0].base;
+    main_secret_offset = (long *)&secret - (long *)box1->ctx->arrays[0].base;
 #endif
 #ifdef TRY_LEAK_OTHER_PROG_SECRET
-    other_secret_offset = (long *)box0.ctx->arrays[0].base - (long *)box1.ctx->arrays[0].base;
+    other_secret_offset = (long *)box0->ctx->arrays[0].base - (long *)box1->ctx->arrays[0].base;
 #endif
     char program_buf[256];
     uintptr_t args[] = {
@@ -96,11 +96,11 @@ int __attribute__((noreturn)) main() {
         if(command_decode(cmdstr, &cmd) != 0)
             goto error;
         
-        if(sandbox_add_command(&box1, cmd))
+        if(sandbox_add_command(box1, cmd))
             goto error;
     }
 
-    if(sandbox_execute(&box1, n_insts1))
+    if(sandbox_execute(box1, n_insts1))
         goto error;
 
     goto success;

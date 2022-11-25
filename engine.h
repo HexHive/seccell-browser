@@ -93,6 +93,7 @@ typedef struct sandbox {
 
 int engine_init();
 
+sandbox_t *sandbox_alloc_init();
 int sandbox_init(sandbox_t *box);
 int sandbox_add_command(sandbox_t *box, command_t cmd);
 int sandbox_execute(sandbox_t *box, long n_cmds);

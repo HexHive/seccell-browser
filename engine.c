@@ -131,6 +131,17 @@ void sandbox_print_var(sandbox_t *box, const char *varname, long varvalue) {
     prints(buf, size);
 }
 
+sandbox_t *sandbox_alloc_init() {
+    sandbox_t *box = mmap_region(NULL, sizeof(sandbox_t), 1, 1, 0);
+
+    if(box) {
+        if(sandbox_init(box))
+            return NULL;
+    }
+    
+    return box;
+}
+
 int sandbox_init(sandbox_t *box) {
     if(n_arenas_used >= MAX_SANDBOXES)
         return -1;
@@ -170,15 +181,15 @@ int sandbox_init(sandbox_t *box) {
      * 1. rx permission for carena  
      * 2. rx permission for trampoline arena 
      * 3. rw permission for ctx
-     * 4. ro permission for sandbox                // TODO: Reduce from entire data section to only sandbox_t
+     * 4. ro permission for sandbox                
      * 5. rw permission for stack                  // TODO: Separate stack. Currently uses same range as code, including trampoline code
      **/
     compartment_permit(box->comp_id, box->carena, 1, 0, 1);
     compartment_permit(box->comp_id, box->trampoline_carena, 1, 0, 1);
     compartment_permit(box->comp_id, box->ctx, 1, 1, 0);
-    //HACK: Should be uncommented. This is because the stack (including box) and code are in the same region
-    compartment_permit(box->comp_id, box, 1, 1, 0);
-    // compartment_permit(box->comp_id, box, 1, 0, 0);
+    compartment_permit(box->comp_id, box, 1, 0, 0);
+    // Hack for stack, also mostly gcc-specific
+    compartment_permit(box->comp_id, __builtin_frame_address(0), 1, 1, 0);
     /* Engine drops to:
      * 1. rw permission on carena 
      * 2. rx permission on trampoline arena
