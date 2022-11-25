@@ -202,9 +202,15 @@ int sandbox_execute(sandbox_t *box, long n_cmds) {
 }
 
 void *sandbox_alloc_trampoline(sandbox_t *box, long size) {
-    // TODO: Implement compartment switching here
+#if CONFIG_COMP
+    switch_to_compartment(1);
+#endif
+    void *ret = sandbox_alloc(box, size, 0);
+#if CONFIG_COMP
+    switch_to_compartment(box->comp_id);
+#endif
 
-    return sandbox_alloc(box, size, 0);
+    return ret;
 }
 
 void sandbox_print_var(sandbox_t *box, const char *varname, long varvalue) {
@@ -218,7 +224,11 @@ void sandbox_print_var(sandbox_t *box, const char *varname, long varvalue) {
 }
 
 void sandbox_print_var_trampoline(sandbox_t *box, const char *var, long val) {
-    // TODO: Implement compartment switching here
-
+#if CONFIG_COMP
+    switch_to_compartment(1);
+#endif
     sandbox_print_var(box, var, val);
+#if CONFIG_COMP
+    switch_to_compartment(box->comp_id);
+#endif
 }
