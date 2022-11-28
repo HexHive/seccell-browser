@@ -73,8 +73,9 @@ command_type_t vocabulary[] = {
 int vocabulary_size = sizeof(vocabulary) / sizeof(vocabulary[0]);
 
 long     n_arenas_used = 0;
+void    *contexts;
 int engine_init() {
-    if(platform_specific_setup())
+    if(platform_specific_setup(&contexts))
         return 1;
 
     init_command_sizes();
@@ -117,18 +118,32 @@ static void *sandbox_alloc(sandbox_t *box, long size, int code) {
     return __sandbox_alloc(reg, reg_used_bytes, size);
 }
 
-void *sandbox_alloc_data(sandbox_t *box, long size) {
-    return sandbox_alloc(box, size, 0);
+static void *sandbox_alloc_data(sandbox_t *box) {
+    long size = box->ctx->alloc_size;
+    void *space = sandbox_alloc(box, size, 0);
+#if CONFIG_COMP
+    box->trampoline_return(box->contexts, space);
+#else
+    return space;
+#endif
 }
 
-void sandbox_print_var(sandbox_t *box, const char *varname, long varvalue) {
+static void *sandbox_print_var(const sandbox_t *box) {
     char buf[256];
+    const char *varname = box->ctx->print_var;
+    long varvalue = box->ctx->print_val;
     uintptr_t args[] = {
         (uintptr_t)varname, 
         (uintptr_t)varvalue
     };
     long size = util_snprintf(buf, 256, "%s: %x\n", args);
     prints(buf, size);
+
+#if CONFIG_COMP
+    box->trampoline_return(box->contexts, NULL);
+#else
+    return NULL;
+#endif
 }
 
 sandbox_t *sandbox_alloc_init() {
@@ -152,31 +167,41 @@ int sandbox_init(sandbox_t *box) {
     box->trampoline_carena = alloc_arena();
     box->t_carena_used_bytes = 0;
     box->ctx = alloc_ctx();
-    box->allocator = sandbox_alloc_data;
+    box->allocator = (trampoline_fn_t)sandbox_alloc_data;
     box->print_var = sandbox_print_var;
     box->n_cmds = 0;
     box->execute = sandbox_alloc(box, execute_commands_size, 1);
-    box->sandbox_entry_trampoline = __sandbox_alloc(box->trampoline_carena, &box->t_carena_used_bytes, sandbox_entry_trampoline_size);
 
     /* Set up context, including pointers to copied trampolines */
     box->ctx->n_arrays = 0;
     box->ctx->n_vars   = 0;
     box->ctx->cur_code_idx = 0;
-    box->ctx->allocator_trampoline = __sandbox_alloc(box->trampoline_carena, &box->t_carena_used_bytes, alloc_trampoline_size);
-    box->ctx->print_var_trampoline = __sandbox_alloc(box->trampoline_carena, &box->t_carena_used_bytes, print_var_trampoline_size);
 
     /* Copy executor into the code arena, trampolines into trampoline arena */
     util_memcpy((void *)box->execute, (void *)execute_commands, execute_commands_size);
-    util_memcpy((void *)box->sandbox_entry_trampoline, (void *)sandbox_entry_trampoline, sandbox_entry_trampoline_size);
-    util_memcpy((void *)box->ctx->allocator_trampoline, (void *)alloc_trampoline, alloc_trampoline_size);
-    util_memcpy((void *)box->ctx->print_var_trampoline, (void *)print_var_trampoline, print_var_trampoline_size);
 
 #ifdef CONFIG_DEBUG
     box->execute = execute_commands;
 #endif
 
 #if CONFIG_COMP
-    box->comp_id = allocate_compartment();
+    // box->comp_id = allocate_compartment();
+    //TODO: Make secdiv allocation within allocate_compartment 
+    // instead of scthreads_init_contexts
+    box->comp_id = n_arenas_used + 2;
+
+    int trampoline_len = (long)(uintptr_t)scthreads_end - (long)(uintptr_t)scthreads_start;
+    void *space = __sandbox_alloc(box->trampoline_carena, 
+                                            &box->t_carena_used_bytes,
+                                            trampoline_len);
+    util_memcpy(space, (void *)scthreads_start, trampoline_len);
+    int scthreads_call_offset = (char *)scthreads_call - (char *)scthreads_start;
+    box->trampoline_call = (void *)((char *)space + scthreads_call_offset);
+    int scthreads_ret_offset = (char *)scthreads_return - (char *)scthreads_start;
+    box->trampoline_return = (void *)((char *)space + scthreads_ret_offset);
+
+    box->contexts = contexts;
+
     /* Compartment gets:
      * 1. rx permission for carena  
      * 2. rx permission for trampoline arena 
@@ -231,5 +256,11 @@ int sandbox_add_command(sandbox_t *box, command_t cmd) {
 }
 
 int sandbox_execute(sandbox_t *box, long n_cmds) {
-    return box->sandbox_entry_trampoline(box, n_cmds);
+    box->ctx->n_cmds = n_cmds;
+#if CONFIG_COMP
+    return (int)(uintptr_t)box->trampoline_call(contexts, box->comp_id, 
+                                    (trampoline_fn_t)box->execute, box);
+#else
+    return box->execute(box);
+#endif
 }

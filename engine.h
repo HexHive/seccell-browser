@@ -46,6 +46,8 @@ typedef struct array {
 
 typedef char arena_t[ARENA_SIZE];
 extern long     n_arenas_used;
+typedef void *(*trampoline_fn_t)(const sandbox_t *);
+typedef int (*app_executor_t)(const sandbox_t *);
 
 typedef struct app_context {
     var_t vars[MAX_VARS];
@@ -57,13 +59,15 @@ typedef struct app_context {
     arena_t darena;
     long d_used_bytes;
 
-    /* List of trampolines for callbacks into the Engine */
-    void *(*allocator_trampoline)(sandbox_t *box, long size);
-    void (*print_var_trampoline)(sandbox_t *box, const char *var, long val);
+    /* Arguments used in callbacks */
+    long n_cmds;    /* Number of commands to execute */
+    long alloc_size;        /* Size of longs for allocation request */
+    const char *print_var;
+    long print_val;
     long cur_code_idx;
+
 } app_context_t;
 
-typedef int (*app_executor_t)(const sandbox_t *box, app_context_t *ctx, long n_cmds);
 typedef struct sandbox {
     command_t cmds[MAX_CMDS];
     
@@ -80,14 +84,17 @@ typedef struct sandbox {
     app_context_t *ctx;
 
     /* List of callbacks into the Engine */
-    void *(*allocator)(sandbox_t *box, long size);
-    void (*print_var)(sandbox_t *box, const char *var, long val);
-
-    /* Entry trampoline */
-    int (*sandbox_entry_trampoline)(sandbox_t *box, long n_cmds);
+    trampoline_fn_t allocator;
+    trampoline_fn_t print_var;
 
 #if CONFIG_COMP
     unsigned comp_id;
+    /* Entry trampoline */
+    void *(*trampoline_call)(void *contexts, int comp_id,
+                                trampoline_fn_t fn,
+                                void *args);
+    void (*trampoline_return)(void *contexts, void *ret);
+    void *contexts;
 #endif
 } sandbox_t;
 

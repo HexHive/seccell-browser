@@ -5,8 +5,10 @@
 #include <sel4platsupport/platsupport.h>
 #include <stdio.h>
 #include <sys/mman.h>
-#include <seccells/seccells.h>
+#include <seccells.h>
+#include <scthreads.h>
 #include "mmap_override.h"
+
 
 void protect_region(void *addr, long size, int read, int write, int exec) {
   int prot = 0;
@@ -40,12 +42,17 @@ void __attribute__((noreturn)) program_exit(int code) {
   seL4_TCB_Suspend(seL4_CapInitThreadTCB);
 }
 
-int platform_specific_setup() {
+#define CONTEXT_VADDR 0xF000000
+int platform_specific_setup(void **contexts_p) {
   /* Setup serial output via seL4_Debug_PutChar */
   if (platsupport_serial_setup_bootinfo_failsafe()) {
     /* Error occured during setup => terminate */
     return 1;
   }
+
+  seL4_BootInfo *info = platsupport_get_bootinfo();
+  *contexts_p = scthreads_init_contexts(info, (void *)CONTEXT_VADDR, MAX_SANDBOXES + 2);
+
   return 0;
 }
 
@@ -115,7 +122,7 @@ void __attribute__((noreturn)) program_exit(int code) {
   _exit(code);
 }
 
-int platform_specific_setup() {
+int platform_specific_setup(void **contexts_p) {
   return 0;
 }
 
@@ -124,6 +131,13 @@ int allocate_compartment() {
 }
 
 int compartment_permit(int comp_id, void *addr, int read, int write, int exec) {
+  return 0;
+}
+
+void *compartment_call(int comp_id,void *(*start_routine)(void *),void *restrict args) {
+  return start_routine(args);
+}
+int switch_to_compartment(int comp_id) {
   return 0;
 }
 #endif

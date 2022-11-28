@@ -2,7 +2,7 @@
 #define CONFIG_H
 
 #define MAX_CMDS   0x100
-#define MAX_SANDBOXES 0x10
+#define MAX_SANDBOXES 0x2
 #define ARENA_SIZE 0x2000
 #define MAX_VARS   0x10
 #define MAX_VAR_SZ 0x10
@@ -16,6 +16,7 @@
 #elif CONFIG_EVAL_TYPE_COMP
 #define CONFIG_COMP 1
 #endif
+#define CONFIG_SCTHREADS_STACK_SIZE (64*1024)
 
 #else  /* Assuming Linux */
 #define CONFIG_COMP 0
