@@ -92,6 +92,8 @@ scthreads_restore_context:
     ld s10, (14*WORDSIZE)(a0)
     ld s11, (15*WORDSIZE)(a0)
     ld ra,  (1*WORDSIZE)(a0)
+    /* Move return value into a0 */
+    mv a0, a3
     ret
 
 scthreads_switch_internal:
