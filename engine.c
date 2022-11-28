@@ -166,6 +166,7 @@ int sandbox_init(sandbox_t *box) {
     box->c_used_bytes = 0;
     box->trampoline_carena = alloc_arena();
     box->t_carena_used_bytes = 0;
+    box->cmd_args_used_bytes = 0;
     box->ctx = alloc_ctx();
     box->allocator = (trampoline_fn_t)sandbox_alloc_data;
     box->print_var = sandbox_print_var;
@@ -213,8 +214,6 @@ int sandbox_init(sandbox_t *box) {
     compartment_permit(box->comp_id, box->trampoline_carena, 1, 0, 1);
     compartment_permit(box->comp_id, box->ctx, 1, 1, 0);
     compartment_permit(box->comp_id, box, 1, 0, 0);
-    // Hack for stack, also mostly gcc-specific
-    compartment_permit(box->comp_id, __builtin_frame_address(0), 1, 1, 0);
     /* Engine drops to:
      * 1. rw permission on carena 
      * 2. rx permission on trampoline arena
@@ -227,13 +226,32 @@ int sandbox_init(sandbox_t *box) {
     return 0;
 }
 
+static void copy_command(sandbox_t *box, command_t *dst, command_t src) {
+    void *space;
+    int arg_len;
+    
+    util_memset((char *)dst->args, 0, MAX_ARGS * sizeof(dst->args[0]));
+    for(int i = 0; i < MAX_ARGS; i++) {
+        char *arg = src.args[i];
+        if(!arg)
+            break;
+
+        arg_len = util_strlen(arg) + 1;
+        space = __sandbox_alloc(box->cmd_args_arena, 
+                                &box->cmd_args_used_bytes, 
+                                arg_len);
+        dst->args[i] = space;
+        util_strcpy(dst->args[i], src.args[i]);
+    }
+}
+
 int sandbox_add_command(sandbox_t *box, command_t cmd) {
     long cmd_idx = box->n_cmds;
 
     if(cmd_idx >= MAX_CMDS)
         return -1;
 
-    box->cmds[cmd_idx] = cmd;
+    copy_command(box, &box->cmds[cmd_idx], cmd);
     for(long j = 0; j < vocabulary_size; j++)
         if(command_match(cmd, j)) {
             /* Copy code for the command into the arena and set the 

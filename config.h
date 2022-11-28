@@ -1,7 +1,8 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-#define MAX_CMDS   0x100
+#define MAX_CMDS   0x40
+#define MAX_CMD_SZ 0x80
 #define MAX_SANDBOXES 0x2
 #define ARENA_SIZE 0x2000
 #define MAX_VARS   0x10

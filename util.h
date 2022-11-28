@@ -69,6 +69,15 @@ int util_strcmp(const char *s0, const char *s1)  {
 }
 
 static inline __attribute__((always_inline))
+int util_strlen(char *c) {
+    int len = 0;
+    while(*(c++))
+        len++;
+
+    return len;
+}
+
+static inline __attribute__((always_inline))
 void util_strcpy(char *dst, const const char *src)  {
     char c;
     do {
@@ -84,6 +93,12 @@ static inline __attribute__((always_inline))
 void util_memcpy(char *dst, char *src, long size)  {
     for(long i = 0; i < size; i++) 
         *(dst++) = *(src++);
+}
+
+static inline __attribute__((always_inline))
+void util_memset(char *s, char c, long size) {
+    while((size--) > 0)
+        *(s++) = c;
 }
 
 static inline __attribute__((always_inline))

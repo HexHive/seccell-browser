@@ -69,9 +69,9 @@ typedef struct app_context {
 } app_context_t;
 
 typedef struct sandbox {
+    char cmd_args_arena[MAX_CMDS * MAX_CMD_SZ];
+    long cmd_args_used_bytes;
     command_t cmds[MAX_CMDS];
-    
-    void *cmd_code_ptrs[MAX_CMDS];
     long n_cmds;
 
     void *carena;        /* Generated code is put in the arena */
