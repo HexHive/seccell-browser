@@ -37,12 +37,17 @@ int execute_commands(const sandbox_t *box) {
         ret = cmd->execute(box, ctx, cmd);
 
         if(ret != 0)
-            return n_cmds;
+            break;
 
         n_cmds--;
         ctx->cur_code_idx++;
     }
-    return 0;
+
+#ifdef CONFIG_COMP
+    box->trampoline_return(box->contexts, (void *)(uintptr_t)n_cmds);
+#else
+    return n_cmds;
+#endif
 }
 
 int alloc_executor(const sandbox_t *box, app_context_t *ctx, const command_t *cmd) {

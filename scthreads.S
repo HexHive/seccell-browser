@@ -13,136 +13,85 @@ scthreads_start:
 
 scthreads_save_context:
     /*
+     * (preserved) a0: contexts
+     * (preserved) a1: target usid
+     * (preserved) a2: continuation address (if call)
+     * (preserved) a3: args pointer (if call) or return value pointer (if return)
+     * (preserved) a4: flag: switch (0) or call (1) or return from call (2)?
+     */
+    /* Use t0, t1, t2 as temporaries */
+    /* 1. Calculate address of state store from contexts (a0) */
+    csrr t0, usid
+    slli t0, t0, WORDSIZESHIFT
+    add  t0, t0, a0
+    ld   t0, (t0)
+    /* In case of returning from thread: need to restore caller USID from context */
+    addi t1, a4, -2
+    bnez t1, .save_context_if_switch_or_call
+.load_return_usid:
+    /* Load urid from context */
+    ld a1,  (32*WORDSIZE)(t0)
+    ret
+.save_context_if_switch_or_call:
+    /* Save return address, currently on stack */
+    ld t1, (sp)
+    sd t1, (1*WORDSIZE)(t0)
+    /* Save SP and caller-saved registers */
+    sd sp, (2*WORDSIZE)(t0)
+    sd s0,  (4*WORDSIZE)(t0)
+    sd s1,  (5*WORDSIZE)(t0)
+    sd s2,  (6*WORDSIZE)(t0)
+    sd s3,  (7*WORDSIZE)(t0)
+    sd s4,  (8*WORDSIZE)(t0)
+    sd s5,  (9*WORDSIZE)(t0)
+    sd s6,  (10*WORDSIZE)(t0)
+    sd s7,  (11*WORDSIZE)(t0)
+    sd s8,  (12*WORDSIZE)(t0)
+    sd s9,  (13*WORDSIZE)(t0)
+    sd s10, (14*WORDSIZE)(t0)
+    sd s11, (15*WORDSIZE)(t0)
+    ret
+
+scthreads_restore_context:
+    /*
      * a0: contexts
-     * a1: target usid
+     * a1: --------
      * a2: continuation address (if call)
      * a3: args pointer (if call) or return value pointer (if return)
      * a4: flag: switch (0) or call (1) or return from call (2)?
      */
-    /* Save s1, s2, s3 onto the stack so that we can clobber them and easily restore them later on */
-    addi sp, sp, -3*WORDSIZE
-    sd s1, (0*WORDSIZE)(sp)
-    sd s2, (1*WORDSIZE)(sp)
-    sd s3, (2*WORDSIZE)(sp)
-    /* Calculate offset into context list based on current USID */
-    csrr s1, usid
-    slli s1, s1, WORDSIZESHIFT
-    /* Load context list address and add offset */
-    add s2, a0, s1
-    ld s2, 0(s2)
-    /* At this point, we have the address of the context we're looking for in s2 */
-    sd a0,  (16*WORDSIZE)(s2)
-    /* In case of returning from thread: need to restore caller USID from context */
-    addi s1, a4, -2
-    bnez s1, .save_context_if_switch_or_call
-.save_context_if_return:
-    /* Load USID to return to */
-    ld a1,  (32*WORDSIZE)(s2)
-.save_context_if_switch_or_call:
-    /* Copy saved ra from stack to context */
-    ld s3,  (3*WORDSIZE)(sp)
-    sd s3,  (1*WORDSIZE)(s2)
-.save_context_endif_return:
-    /* Store original caller sp, not the locally used one (that includes saved s1, s2, s3) */
-    addi s3, sp, 4*WORDSIZE
-    sd s3,  (2*WORDSIZE)(s2)
-    sd gp,  (3*WORDSIZE)(s2)
-    sd s0,  (4*WORDSIZE)(s2)
-    /* Copy previous s1, s2, s3 from the stack into the context */
-    ld s3,  (0*WORDSIZE)(sp)
-    sd s3,  (5*WORDSIZE)(s2)
-    ld s3,  (1*WORDSIZE)(sp)
-    sd s3,  (6*WORDSIZE)(s2)
-    ld s3,  (2*WORDSIZE)(sp)
-    sd s3,  (7*WORDSIZE)(s2)
-    sd s4,  (8*WORDSIZE)(s2)
-    sd s5,  (9*WORDSIZE)(s2)
-    sd s6,  (10*WORDSIZE)(s2)
-    sd s7,  (11*WORDSIZE)(s2)
-    sd s8,  (12*WORDSIZE)(s2)
-    sd s9,  (13*WORDSIZE)(s2)
-    sd s10, (14*WORDSIZE)(s2)
-    sd s11, (15*WORDSIZE)(s2)
-    sd a1,  (17*WORDSIZE)(s2)
-    sd a2,  (18*WORDSIZE)(s2)
-    sd a3,  (19*WORDSIZE)(s2)
-    sd a4,  (20*WORDSIZE)(s2)
-    sd a5,  (21*WORDSIZE)(s2)
-    sd a6,  (22*WORDSIZE)(s2)
-    sd a7,  (23*WORDSIZE)(s2)
-    sd t0,  (24*WORDSIZE)(s2)
-    sd t1,  (25*WORDSIZE)(s2)
-    sd t2,  (26*WORDSIZE)(s2)
-    sd t3,  (27*WORDSIZE)(s2)
-    sd t4,  (28*WORDSIZE)(s2)
-    sd t5,  (29*WORDSIZE)(s2)
-    sd t6,  (30*WORDSIZE)(s2)
-    sd tp,  (31*WORDSIZE)(s2)
-    /* Reset the stack pointer - no register restoring since they will be overwritten by the context restore anyway */
-    addi sp, sp, 3*WORDSIZE
+    csrr t0, usid
+    slli t0, t0, WORDSIZESHIFT
+    add  a0, a0, t0
+    ld   a0, (a0)
+    /* Restore SP, and adjust for frame of scthreads_switch_internal */
+    ld   sp, (2*WORDSIZE)(a0)
+    addi sp, sp, WORDSIZE
+    /* Switch and return restore state, call sets up args */
+    addi a4, a4, -1
+    bnez a4, .restore_context_if_switch_return
+.setup_args_if_call:
+    /* Save the urid in the context for later */
+    csrr t0, urid
+    sd   t0, (32*WORDSIZE)(a0)
+    mv   a0, a3
+    mv   ra, a2
     ret
-
-scthreads_restore_context:
-    /* Clobber s1, s2, s3 - they're restored and overwritten from the saved context anyway */
-    /* Calculate offset into context list based on current USID */
-    csrr s1, usid
-    slli s1, s1, WORDSIZESHIFT
-    /* Load context list address and add offset */
-    mv s2, a0
-    add s2, s2, s1
-    ld s2, 0(s2)
-    /* At this point, we have the address of the context we're looking for in s2 */
-    ld sp,  (2*WORDSIZE)(s2)
-    ld gp,  (3*WORDSIZE)(s2)
-    /* Differentiate between scthreads_switch, scthreads_call, scthreads_return */
-    addi s3, a4, -1
-    beqz s3, .restore_context_else_if_call
-    bgtz s3, .restore_context_else_if_return
-.restore_context_if_switch:
-    /* Thread switch: restore context */
-    ld ra,  (1*WORDSIZE)(s2)
-    ld a0,  (16*WORDSIZE)(s2)
-    j .restore_context_endif_switch
-.restore_context_else_if_return:
-    /* Thread return: set return value/pointer */
-    ld ra,  (1*WORDSIZE)(s2)
-    mv a0, a3
-    j .restore_context_endif_switch
-.restore_context_else_if_call:
-    /* Call function within other thread: set function address and arguments, save URID for returning */
-    mv ra, a2
-    mv a0, a3
-    csrr s1, urid
-    sd s1,  (32*WORDSIZE)(s2)
-.restore_context_endif_switch:
-    ld s0,  (4*WORDSIZE)(s2)
-    ld s1,  (5*WORDSIZE)(s2)
-    /* Restore s2 only in the end when we don't need it anymore */
-    ld s3,  (7*WORDSIZE)(s2)
-    ld s4,  (8*WORDSIZE)(s2)
-    ld s5,  (9*WORDSIZE)(s2)
-    ld s6,  (10*WORDSIZE)(s2)
-    ld s7,  (11*WORDSIZE)(s2)
-    ld s8,  (12*WORDSIZE)(s2)
-    ld s9,  (13*WORDSIZE)(s2)
-    ld s10, (14*WORDSIZE)(s2)
-    ld s11, (15*WORDSIZE)(s2)
-    ld a1,  (17*WORDSIZE)(s2)
-    ld a2,  (18*WORDSIZE)(s2)
-    ld a3,  (19*WORDSIZE)(s2)
-    ld a4,  (20*WORDSIZE)(s2)
-    ld a5,  (21*WORDSIZE)(s2)
-    ld a6,  (22*WORDSIZE)(s2)
-    ld a7,  (23*WORDSIZE)(s2)
-    ld t0,  (24*WORDSIZE)(s2)
-    ld t1,  (25*WORDSIZE)(s2)
-    ld t2,  (26*WORDSIZE)(s2)
-    ld t3,  (27*WORDSIZE)(s2)
-    ld t4,  (28*WORDSIZE)(s2)
-    ld t5,  (29*WORDSIZE)(s2)
-    ld t6,  (30*WORDSIZE)(s2)
-    ld tp,  (31*WORDSIZE)(s2)
-    ld s2,  (6*WORDSIZE)(s2)
+.restore_context_if_switch_return:
+    /* Restore caller-saved registers */
+    ld s0,  (4*WORDSIZE)(a0)
+    ld s1,  (5*WORDSIZE)(a0)
+    ld s2,  (6*WORDSIZE)(a0)
+    ld s3,  (7*WORDSIZE)(a0)
+    ld s4,  (8*WORDSIZE)(a0)
+    ld s5,  (9*WORDSIZE)(a0)
+    ld s6,  (10*WORDSIZE)(a0)
+    ld s7,  (11*WORDSIZE)(a0)
+    ld s8,  (12*WORDSIZE)(a0)
+    ld s9,  (13*WORDSIZE)(a0)
+    ld s10, (14*WORDSIZE)(a0)
+    ld s11, (15*WORDSIZE)(a0)
+    ld ra,  (1*WORDSIZE)(a0)
     ret
 
 scthreads_switch_internal:
