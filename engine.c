@@ -208,7 +208,6 @@ int sandbox_init(sandbox_t *box) {
      * 2. rx permission for trampoline arena 
      * 3. rw permission for ctx
      * 4. ro permission for sandbox                
-     * 5. rw permission for stack                  // TODO: Separate stack. Currently uses same range as code, including trampoline code
      **/
     compartment_permit(box->comp_id, box->carena, 1, 0, 1);
     compartment_permit(box->comp_id, box->trampoline_carena, 1, 0, 1);

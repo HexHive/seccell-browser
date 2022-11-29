@@ -43,7 +43,7 @@ int execute_commands(const sandbox_t *box) {
         ctx->cur_code_idx++;
     }
 
-#ifdef CONFIG_COMP
+#if CONFIG_COMP
     box->trampoline_return(box->contexts, (void *)(uintptr_t)n_cmds);
 #else
     return n_cmds;

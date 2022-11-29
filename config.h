@@ -4,7 +4,7 @@
 #define MAX_CMDS   0x40
 #define MAX_CMD_SZ 0x80
 #define MAX_SANDBOXES 0x2
-#define ARENA_SIZE 0x2000
+#define ARENA_SIZE 0x4000
 #define MAX_VARS   0x10
 #define MAX_VAR_SZ 0x10
 #define MAX_ARRS   0x10
@@ -25,6 +25,8 @@
 
 // #define TRY_LEAK_MAIN_SECRET
 // #define TRY_LEAK_OTHER_PROG_SECRET
+// #define TRY_CORRUPT_MAIN_SECRET
+// #define TRY_CORRUPT_OTHER_PROG_SECRET
 //TODO: Include defines to enable overwrites
 
 // #define CONFIG_DEBUG
